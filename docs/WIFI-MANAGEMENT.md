@@ -89,6 +89,61 @@ failure message. The screen then refreshes so the fields show what the modem act
   address server, and `br0` is shared with USB tethering. Shown read-only to avoid breaking both
   Wi-Fi and USB connectivity.
 
+## Second qualification round — ON/OFF, password and SSID visibility
+
+Three further mechanisms were tested on the modem. All three are overridden by stock components,
+so the controls remain disabled.
+
+### Wi-Fi ON/OFF
+
+| Attempt | Result |
+|---|---|
+| Cancel the 20 s vendor alarm, then framework AP disable | Stays off while the alarm is cancelled, but re-enabling does not reliably broadcast; the access point came back on the framework default name instead of the configured one. |
+| Cancel the alarm, then stop `hostapd` only | `netd` restarts `hostapd` within about 40 s; AP returns. |
+| Restore the vendor alarm helper | Intermittent process abort until the helper was changed to halt cleanly; the alarm itself still does not solve the disable path. |
+
+The framework disable is the only state that keeps the AP silent, and the firmware does not
+restore a working beacon afterwards without a reboot. The vendor service also adopted the
+framework default SSID into its own saved configuration during the test; the original name was
+restored through the verified SSID transaction.
+
+### Password
+
+A privileged path was built that writes the framework AP configuration directly (no vendor
+setter), updates the vendor JSON, restarts the AP and verifies by SHA-256 without printing the key.
+It applied and the AP used the new key, but:
+
+- `netd` logs the passphrase on every access-point start:
+  `CMD INPUT [set wpa_passphrase=…]`, `Cmd: wpa_passphrase Argument :…`,
+  `Updated:wpa_passphrase=…`. This is stock behavior and also happens on a normal restart with
+  the existing password.
+- The vendor service overwrote the framework key from its in-memory configuration on the next
+  bind, so the new key was not durable.
+
+### SSID visibility (hidden)
+
+Writing `hiddenSSID` to the framework configuration and the vendor JSON, then restarting the AP,
+was reverted on the next vendor bind: both the active `ignore_broadcast_ssid` and the framework
+flag returned to visible. The vendor applies its in-memory hidden flag on every AP bind and has no
+endpoint that updates that memory.
+
+### Required changes — approval needed
+
+These features cannot be completed safely without changing protected firmware components:
+
+1. **`netd`**: redact `wpa_passphrase` in its hostapd control logging. This is a native system
+   binary; replacing it requires a matching build for this device and a writable system partition.
+2. **`MifiService`** (`/system/priv-app/MifiService.apk`): stop auto-binding the AP when Wi-Fi is
+   intentionally off, accept hidden-SSID and password changes without logging, and persist them.
+   The APK is platform-signed and holds system permissions; rebuilding it requires the OEM signing
+   key, which is not available.
+3. Without those changes, the only alternative is to replace the vendor Wi-Fi stack with an
+   independent hostapd/DHCP implementation. That would remove the APN, connection and status
+   management UZConnect depends on and is not recommended.
+
+No system file, partition or signature was modified. The controls stay disabled until the required
+changes are approved.
+
 ## Qualification harness
 
 `tools/wifi/verify` is a console project used for the tests above. It prints only condition

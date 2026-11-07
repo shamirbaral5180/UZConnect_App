@@ -15,7 +15,7 @@ public final class WifiProbe {
         Thread deadline = new Thread(new Runnable() {
             public void run() {
                 try { Thread.sleep(12000); } catch (InterruptedException ignored) { }
-                System.exit(2); // A stuck Binder must not leave a root helper process behind.
+                Runtime.getRuntime().halt(2); // A stuck Binder must not leave a root helper process behind.
             }
         });
         deadline.setDaemon(true);
@@ -34,7 +34,8 @@ public final class WifiProbe {
         } catch (Throwable ignored) {
             System.out.println("{\"version\":1,\"ok\":false}");
         }
-        System.exit(0);
+        System.out.flush();
+        Runtime.getRuntime().halt(0);
     }
 
     private static JSONObject base() throws JSONException {

@@ -85,11 +85,11 @@ public static class WifiCapabilities
     public static IReadOnlyList<WifiFeature> Features { get; } = new WifiFeature[]
     {
         new("Network name / maximum devices", "Available", "Changes are backed up, applied, confirmed in active and saved state, and restored if verification fails."),
-        new("Wi-Fi on / off", "Unavailable", "Reliable restart is not confirmed. The automatic restart also maintains mobile connectivity."),
-        new("Password changes", "Unavailable", "The modem records passwords internally. Secure changes cannot be guaranteed."),
+        new("Wi-Fi on / off", "Unavailable", "The modem service re-enables the access point, and the networking service restarts hostapd if it is stopped. A firmware change is required."),
+        new("Password changes", "Unavailable", "The stock networking service writes the passphrase to the Android log during every access-point restart."),
         new("Security mode", "Read only", "Only the current security configuration has been verified."),
         new("Channel selection", "Read only", "The modem's channel-changing control does not apply changes."),
-        new("Hide network name", "Read only", "Safe application and restart recovery have not been verified."),
+        new("Hide network name", "Read only", "The modem service overwrites the hidden flag from its in-memory configuration on every restart."),
         new("Allow / block devices", "Unavailable", "Device filtering enforcement has not been verified."),
         new("Reserved addresses", "Unavailable", "No verified persistent reservation mechanism is available."),
         new("DHCP / gateway / DNS", "Read only", "Working configuration controls are not available; changes may interrupt USB and Wi-Fi."),

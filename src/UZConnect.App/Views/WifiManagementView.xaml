@@ -162,6 +162,70 @@
         <Style x:Key="PageHeader" TargetType="TextBlock" BasedOn="{StaticResource RouterSection}">
             <Setter Property="FontSize" Value="12" />
         </Style>
+
+        <!-- Large power control. Disabled until the firmware can keep the access point off. -->
+        <Style x:Key="PowerToggle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="156" />
+            <Setter Property="Height" Value="46" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Border x:Name="Track" CornerRadius="23" Background="#B9C4CF" />
+                            <Ellipse x:Name="Knob" Width="38" Height="38" Fill="White" HorizontalAlignment="Left"
+                                     Margin="4,0,0,0" />
+                            <TextBlock x:Name="State" Text="OFF" Foreground="White" FontWeight="Bold" FontSize="13"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="#4C9A2A" />
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Knob" Property="Margin" Value="0,0,4,0" />
+                                <Setter TargetName="State" Property="Text" Value="ON" />
+                                <Setter TargetName="State" Property="HorizontalAlignment" Value="Left" />
+                                <Setter TargetName="State" Property="Margin" Value="20,0,0,0" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="VisibilityToggle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="140" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Border x:Name="Track" CornerRadius="14" Background="#B9C4CF" />
+                            <Ellipse x:Name="Knob" Width="22" Height="22" Fill="White" HorizontalAlignment="Left" Margin="3,0,0,0" />
+                            <TextBlock x:Name="State" Text="Hidden" Foreground="White" FontWeight="Bold" FontSize="11"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="#2E75B6" />
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0" />
+                                <Setter TargetName="State" Property="Text" Value="Broadcast" />
+                                <Setter TargetName="State" Property="HorizontalAlignment" Value="Left" />
+                                <Setter TargetName="State" Property="Margin" Value="12,0,0,0" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="#F5F7FA">
@@ -242,7 +306,28 @@
                     <StackPanel Visibility="{Binding SelectedPageKey, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Status}">
                         <TextBlock Text="Status" Style="{StaticResource PageHeader}" />
                         <Border Style="{StaticResource RouterRule}" />
-                        <TextBlock Text="Wireless" Style="{StaticResource RouterSection}" Margin="0,8,0,2" />
+
+                        <Border Style="{StaticResource RouterRow}" Margin="0,8,0,0" Padding="8,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="170" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Wi-Fi :" Style="{StaticResource RouterLabel}" />
+                                <ToggleButton Grid.Column="1" Style="{StaticResource PowerToggle}" IsEnabled="False"
+                                              IsChecked="{Binding WifiEnabled, Mode=OneWay}"
+                                              AutomationProperties.Name="Wi-Fi power" />
+                                <TextBlock Grid.Column="2" Text="{Binding Status}" Margin="14,0,0,0"
+                                           VerticalAlignment="Center" FontWeight="Bold" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource RouterRow}" BorderThickness="0">
+                            <TextBlock Text="Wi-Fi power is unavailable on this firmware; the modem service re-enables the access point."
+                                       Foreground="{StaticResource RouterMuted}" TextWrapping="Wrap" />
+                        </Border>
+
+                        <TextBlock Text="Wireless" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
                         <Border Style="{StaticResource RouterRow}">
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -355,9 +440,11 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <TextBlock Text="SSID Broadcast :" Style="{StaticResource RouterLabel}" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <RadioButton Content="Enable" IsChecked="{Binding BroadcastEnabled, Mode=OneWay}" IsEnabled="False" VerticalAlignment="Center" />
-                                    <RadioButton Content="Disable" Margin="22,0,0,0" IsEnabled="False" VerticalAlignment="Center"
-                                                 IsChecked="{Binding BroadcastDisabled, Mode=OneWay}" />
+                                    <ToggleButton Style="{StaticResource VisibilityToggle}" IsEnabled="False"
+                                                  IsChecked="{Binding BroadcastEnabled, Mode=OneWay}"
+                                                  AutomationProperties.Name="SSID broadcast" />
+                                    <TextBlock Text="{Binding Broadcast}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{StaticResource RouterMuted}" />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -388,8 +475,10 @@
                                 <TextBlock Text="Password :" Style="{StaticResource RouterLabel}" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <PasswordBox Width="170" Height="22" IsEnabled="False" VerticalContentAlignment="Center"
-                                                 AutomationProperties.Name="Wireless password, currently locked" />
-                                    <TextBlock Text="{Binding PasswordStatus}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                 AutomationProperties.Name="New Wi-Fi password" />
+                                    <ToggleButton Content="Show" Width="58" Height="22" IsEnabled="False" Margin="6,0,0,0" />
+                                    <Button Style="{StaticResource RouterButton}" Content="Save" Width="64" Height="22" IsEnabled="False" Margin="6,0,0,0" />
+                                    <TextBlock Text="{Binding PasswordStatus}" Margin="10,0,0,0" VerticalAlignment="Center"
                                                Foreground="{StaticResource RouterMuted}" />
                                 </StackPanel>
                             </Grid>
@@ -398,7 +487,8 @@
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <TextBlock Text="Password changes :" Style="{StaticResource RouterLabel}" />
-                                <TextBlock Grid.Column="1" Text="Not available" TextWrapping="Wrap" Foreground="{StaticResource RouterMuted}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" TextWrapping="Wrap" Foreground="{StaticResource RouterMuted}" VerticalAlignment="Center"
+                                           Text="Unavailable. The modem service writes the passphrase to the Android log during every access-point restart." />
                             </Grid>
                         </Border>
 
