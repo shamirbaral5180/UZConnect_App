@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UZConnect.App/UZConnect.App.csproj" />
+    <Project Path="src/UZConnect.Core/UZConnect.Core.csproj" />
+    <Project Path="src/UZConnect.Windows/UZConnect.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/UZConnect.Tests/UZConnect.Tests.csproj" />
+  </Folder>
+</Solution>

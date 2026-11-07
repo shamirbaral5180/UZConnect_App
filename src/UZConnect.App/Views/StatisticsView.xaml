@@ -1,0 +1,173 @@
+<UserControl x:Class="UZConnect.App.Views.StatisticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:UZConnect.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DataContext="{d:DesignInstance Type=vm:StatisticsViewModel}"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <RotateTransform x:Key="RotateTransform" Angle="-90" />
+    </UserControl.Resources>
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Transfer" FontWeight="Bold" FontSize="11" Margin="0,0,0,2" />
+                <TextBlock Text="Transfer Time:" FontSize="11" Margin="12,1" />
+                <Grid Margin="28,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Transfer Time:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding TransferTime}" FontSize="11" />
+                </Grid>
+                <TextBlock Text="Upload" FontSize="11" Margin="12,1" />
+                <Grid Margin="28,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Speed:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding UploadSpeed}" FontSize="11" />
+                </Grid>
+                <Grid Margin="28,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding UploadedData}" FontSize="11" />
+                </Grid>
+                <TextBlock Text="Download" FontSize="11" Margin="12,1" />
+                <Grid Margin="28,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Speed:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding DownloadSpeed}" FontSize="11" />
+                </Grid>
+                <Grid Margin="28,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding DownloadedData}" FontSize="11" />
+                </Grid>
+
+                <TextBlock Text="Statistics" FontWeight="Bold" FontSize="11" Margin="0,10,0,2" />
+                <TextBlock Text="Last Time Reset:" FontSize="11" Margin="12,1" />
+                <Grid Margin="28,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Time:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReset}" FontSize="11" />
+                </Grid>
+
+                <TextBlock Text="Daily" FontSize="11" Margin="12,1" />
+                <Grid Margin="28,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Uploaded Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding DailyUpload}" FontSize="11" />
+                </Grid>
+                <Grid Margin="28,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Downloaded Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding DailyDownload}" FontSize="11" />
+                </Grid>
+
+                <TextBlock Text="Monthly" FontSize="11" Margin="12,1" />
+                <Grid Margin="28,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Uploaded Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding MonthlyUpload}" FontSize="11" />
+                </Grid>
+                <Grid Margin="28,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Downloaded Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding MonthlyDownload}" FontSize="11" />
+                </Grid>
+
+                <TextBlock Text="Yearly" FontSize="11" Margin="12,1" />
+                <Grid Margin="28,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Uploaded Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding YearlyUpload}" FontSize="11" />
+                </Grid>
+                <Grid Margin="28,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Downloaded Data:" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding YearlyDownload}" FontSize="11" />
+                </Grid>
+
+                <TextBlock Text="Note: Traffic statistics is only for reference." FontSize="10"
+                           Foreground="{StaticResource MutedText}" Margin="0,12,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Classic black chart -->
+        <Border Grid.Column="1" Background="#050505" BorderBrush="#1A1A1A" BorderThickness="1" Margin="8,0,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="34" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Stretch" Background="#0A0A0A">
+                    <TextBlock Text="{Binding ChartMaximum}" Foreground="#45E0E0" FontSize="9" HorizontalAlignment="Right"
+                               Margin="0,4,4,0" />
+                    <TextBlock Text="0.0" Foreground="#45E0E0" FontSize="9" HorizontalAlignment="Right"
+                               VerticalAlignment="Bottom" Margin="0,0,4,18" />
+                    <TextBlock Text="Speed (KB/s)" Foreground="#45E0E0" FontSize="9" LayoutTransform="{DynamicResource RotateTransform}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </StackPanel>
+                <Canvas Grid.Column="1" x:Name="ChartCanvas" Background="#050505" ClipToBounds="True"
+                        Margin="0,8,8,18">
+                    <!-- Grid lines -->
+                    <Line X1="0" Y1="0" X2="620" Y2="0" Stroke="#1C8C8C" StrokeThickness="1" />
+                    <Line X1="0" Y1="52" X2="620" Y2="52" Stroke="#1C8C8C" StrokeThickness="1" />
+                    <Line X1="0" Y1="104" X2="620" Y2="104" Stroke="#1C8C8C" StrokeThickness="1" />
+                    <Line X1="0" Y1="156" X2="620" Y2="156" Stroke="#1C8C8C" StrokeThickness="1" />
+                    <Line X1="0" Y1="208" X2="620" Y2="208" Stroke="#1C8C8C" StrokeThickness="1" />
+                    <Line X1="0" Y1="260" X2="620" Y2="260" Stroke="#1C8C8C" StrokeThickness="1" />
+                    <Polyline Points="{Binding UploadPoints}" Stroke="#E8E83A" StrokeThickness="1.5" />
+                    <Polyline Points="{Binding DownloadPoints}" Stroke="#38B000" StrokeThickness="1.5" />
+                </Canvas>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                    Margin="50,0,0,2">
+            <Rectangle Width="10" Height="10" Fill="#E8E83A" />
+            <TextBlock Text="Upload Speed" FontSize="9" Foreground="#333" Margin="4,0,12,0" />
+            <Rectangle Width="10" Height="10" Fill="#38B000" />
+            <TextBlock Text="Download Speed" FontSize="9" Foreground="#333" Margin="4,0,0,0" />
+        </StackPanel>
+    </Grid>
+</UserControl>

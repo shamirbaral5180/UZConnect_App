@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>UZConnect.Core</RootNamespace>
+    <AssemblyName>UZConnect.Core</AssemblyName>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,75 @@
+<UserControl x:Class="UZConnect.App.Views.UssdView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:UZConnect.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DataContext="{d:DesignInstance Type=vm:UssdViewModel}"
+             mc:Ignorable="d">
+    <Grid Margin="14">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1.15*" />
+            <ColumnDefinition Width="18" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="USSD result:" FontSize="11" Margin="0,0,0,4" />
+            <TextBox Grid.Row="1" Style="{StaticResource ClassicMultilineTextBox}" IsReadOnly="True"
+                     Text="{Binding Result, Mode=OneWay}" VerticalScrollBarVisibility="Auto" />
+            <TextBlock Grid.Row="2" Text="Enter USSD Number:" FontSize="11" Margin="0,10,0,4" />
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Style="{StaticResource ClassicTextBox}" Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox Grid.Column="1" Style="{StaticResource ClassicTextBox}" Width="150" Margin="4,0,0,0"
+                         Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ToolTip="Command name (optional)" />
+            </Grid>
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <Button Style="{StaticResource ClassicButton}" Content="Add" Command="{Binding AddCommand}"
+                        Width="90" Margin="0,0,6,0" />
+                <Button Style="{StaticResource ClassicButton}" Content="{Binding SendButtonText}"
+                        Command="{Binding SendCommand}" Width="90" />
+                <Button Style="{StaticResource ClassicButton}" Content="Cancel"
+                        Command="{Binding CancelSessionCommand}" Width="90" Margin="6,0,0,0"
+                        Visibility="{Binding SessionActive, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="USSD command list:" FontSize="11" Margin="0,0,0,4" />
+            <ListView Grid.Row="1" Style="{StaticResource ListViewStyle}" ItemsSource="{Binding Commands}"
+                      SelectedItem="{Binding SelectedCommand, Mode=TwoWay}">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Name" Width="170" DisplayMemberBinding="{Binding DisplayName}" />
+                        <GridViewColumn Header="Code" Width="120" DisplayMemberBinding="{Binding Code}" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                <Button Style="{StaticResource ClassicButton}" Content="Edit" Command="{Binding EditCommand}"
+                        Width="76" Margin="0,0,6,0" />
+                <Button Style="{StaticResource ClassicButton}" Content="Delete" Command="{Binding DeleteCommand}"
+                        Width="76" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.ColumnSpan="3" Text="{Binding Status}" FontSize="10" Foreground="{StaticResource MutedText}"
+                   VerticalAlignment="Bottom" Margin="0,4,0,0" />
+    </Grid>
+</UserControl>

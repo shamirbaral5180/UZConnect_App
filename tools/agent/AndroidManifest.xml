@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.uzconnect.agent"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="19" />
+
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <application
+        android:allowBackup="false"
+        android:label="UZConnect Agent"
+        android:debuggable="true">
+
+        <receiver
+            android:name=".AgentReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.uzconnect.agent.SENT" />
+                <action android:name="com.uzconnect.agent.DELIVERED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

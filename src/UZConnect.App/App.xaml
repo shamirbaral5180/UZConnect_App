@@ -1,0 +1,45 @@
+﻿<Application x:Class="UZConnect.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:UZConnect.App.ViewModels"
+             xmlns:views="clr-namespace:UZConnect.App.Views"
+             xmlns:converters="clr-namespace:UZConnect.App.Converters"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Classic.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="BoolToVis" />
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+            <converters:BoolToOpacityConverter x:Key="BoolToOpacity" />
+            <converters:NullToVisibilityConverter x:Key="NullToVis" />
+            <converters:BooleanToTextConverter x:Key="BoolToText" />
+            <converters:StringEqualsToVisibilityConverter x:Key="StringEqualsToVis" />
+            <vm:DiagnosticLevelBrushConverter x:Key="LevelToBrush" />
+
+            <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+                <views:DashboardView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:MessagesViewModel}">
+                <views:MessagesView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ContactsViewModel}">
+                <views:ContactsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:UssdViewModel}">
+                <views:UssdView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:StatisticsViewModel}">
+                <views:StatisticsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+                <views:SettingsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:HelpViewModel}">
+                <views:HelpView />
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

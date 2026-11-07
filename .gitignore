@@ -1,0 +1,25 @@
+# Build output
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Local data and logs
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Agent build intermediates
+tools/agent/out/work/
+tools/agent/out/*.idsig
+
+# Hardware probe output
+hardware-probe/**/bin/
+hardware-probe/**/obj/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store

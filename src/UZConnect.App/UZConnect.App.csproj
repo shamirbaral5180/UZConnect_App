@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>UZConnect.App</RootNamespace>
+    <AssemblyName>UZConnect</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <PublishSingleFile>false</PublishSingleFile>
+    <Version>0.1.0</Version>
+    <Authors>UZConnect</Authors>
+    <Product>UZConnect</Product>
+    <ApplicationIcon>Assets\uzconnect.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\UZConnect.Core\UZConnect.Core.csproj" />
+    <ProjectReference Include="..\UZConnect.Windows\UZConnect.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\icons\*.png" />
+    <Resource Include="Assets\uzconnect.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\tools\agent\out\uzconnect-agent.apk" Link="Assets\uzconnect-agent.apk" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\tools\agent\out\uzconnect-agent.apk')" />
+  </ItemGroup>
+</Project>
+

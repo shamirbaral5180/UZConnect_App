@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>UZConnect.Windows</RootNamespace>
+    <AssemblyName>UZConnect.Windows</AssemblyName>
+
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
+    <PackageReference Include="System.Management" Version="10.0.14" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.14" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\UZConnect.Core\UZConnect.Core.csproj" />
+  </ItemGroup>
+</Project>
