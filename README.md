@@ -24,7 +24,7 @@
   <a href="#-download"><b>Download</b></a> ·
   <a href="#-screenshots"><b>Screenshots</b></a> ·
   <a href="#-features"><b>Features</b></a> ·
-  <a href="#-wi-fi-management"><b>Wi‑Fi</b></a> ·
+  <a href="#-wifi-management"><b>Wi‑Fi</b></a> ·
   <a href="#-build-from-source"><b>Build</b></a> ·
   <a href="docs/WIFI-MANAGEMENT.md"><b>Docs</b></a>
 </p>
