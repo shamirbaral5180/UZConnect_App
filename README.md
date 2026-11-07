@@ -62,13 +62,12 @@ no firmware flashing, no vendor cloud.
 
 | | |
 |---|---|
-| Package | `UZConnect-0.1.0-win-x64.zip` (self-contained) |
-| Size | ~62 MB |
+| **Single-file (recommended)** | `UZConnect-0.1.0-win-x64.exe` — download and run, nothing to unzip |
+| Portable build | `UZConnect-0.1.0-win-x64.zip` (~62 MB) |
 | Requirements | Windows 10/11 x64 · UZ801 modem over USB · ADB authorized |
 | Runtime | None — .NET 10 is bundled |
-| Verified on | FY_UZ801_V3.2 · stock firmware V2.3.11 |
 
-1. Unzip anywhere and run `UZConnect.exe`.
+1. Download the `.exe` and run it (or unzip the portable build).
 2. Plug in the modem and wait for **Device ready**.
 3. If ADB is not detected, open **Settings → General** and point UZConnect at `adb.exe`.
 4. SMS sending needs the bundled helper; install it once from **Settings → General**.

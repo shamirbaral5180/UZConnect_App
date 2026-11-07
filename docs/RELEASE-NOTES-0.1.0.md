@@ -3,6 +3,16 @@
 Windows desktop manager for the **FY_UZ801_V3.2** USB modem (MSM8916, stock firmware V2.3.11),
 in the classic D-Link Connection Manager style.
 
+## Packages
+
+| File | What it is | SHA-256 |
+|---|---|---|
+| `UZConnect-0.1.0-win-x64.exe` | Single-file app, no unzip and no .NET install | `CE4BC6AA62BA1A55D3C66E8A631D4F1C741DAB2B727991F0C01F8D147AD2935D` |
+| `UZConnect-0.1.0-win-x64.zip` | Portable folder build | `FAF2707885A1ABAC5E86FE1F1B8B38440835B7B41BB781E80B442D3EC520825A` |
+
+The single-file build extracts its bundled SMS/Wi-Fi helpers to
+`%LOCALAPPDATA%\UZConnect\helpers` on first use.
+
 ## What works
 
 - USB detection, ADB transport, device/SIM/network status

@@ -75,8 +75,7 @@ public sealed class WifiManagementService(AdbClient adb, MifiWebClient mifi)
 
     private async Task EnsureHelperAsync(string serial, CancellationToken cancellationToken)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Assets", "uzconnect-wifi.jar");
-        if (!File.Exists(path)) throw new InvalidOperationException("Wi-Fi support files are missing. Reinstall UZConnect.");
+        var path = HelperFiles.Resolve("uzconnect-wifi.jar");
         // Re-push after every entry: reconnection/reboot and helper version changes must not reuse an unknown binary.
         var result = await adb.RunAsync(["-s", serial, "push", path, RemoteJar], TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
         if (!result.Success) throw new IOException("Wi-Fi information could not be read.");

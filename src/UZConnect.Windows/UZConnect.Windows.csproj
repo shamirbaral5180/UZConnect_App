@@ -13,4 +13,13 @@
   <ItemGroup>
     <ProjectReference Include="..\UZConnect.Core\UZConnect.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Helpers are embedded so the single-file build works without an Assets folder. -->
+    <EmbeddedResource Include="..\..\tools\agent\out\uzconnect-agent.apk" Link="Helpers\uzconnect-agent.apk"
+                      LogicalName="UZConnect.Helpers.uzconnect-agent.apk"
+                      Condition="Exists('..\..\tools\agent\out\uzconnect-agent.apk')" />
+    <EmbeddedResource Include="..\..\tools\wifi\out\uzconnect-wifi.jar" Link="Helpers\uzconnect-wifi.jar"
+                      LogicalName="UZConnect.Helpers.uzconnect-wifi.jar"
+                      Condition="Exists('..\..\tools\wifi\out\uzconnect-wifi.jar')" />
+  </ItemGroup>
 </Project>

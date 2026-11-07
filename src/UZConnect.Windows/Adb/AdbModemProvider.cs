@@ -954,17 +954,15 @@ public sealed partial class AdbModemProvider : IModemProvider, ISmsCapable, ISim
     public async Task InstallSmsAgentAsync(CancellationToken cancellationToken = default)
     {
         var serial = RequireSerial();
-        var apkPath = Path.Combine(AppContext.BaseDirectory, "Assets", "uzconnect-agent.apk");
-        if (!File.Exists(apkPath))
+        string apkPath;
+        try
         {
-            apkPath = Path.Combine(AppContext.BaseDirectory, "uzconnect-agent.apk");
+            apkPath = HelperFiles.Resolve("uzconnect-agent.apk");
         }
-
-        if (!File.Exists(apkPath))
+        catch (FileNotFoundException)
         {
             throw new FileNotFoundException(
-                "The bundled SMS helper APK was not found. Build tools/agent/build-agent.ps1 before running the app.",
-                apkPath);
+                "The bundled SMS helper APK was not found. Build tools/agent/build-agent.ps1 before running the app.");
         }
 
         if (!await _adb.InstallApkAsync(serial, apkPath, cancellationToken).ConfigureAwait(false))
