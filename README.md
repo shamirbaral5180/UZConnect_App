@@ -1,118 +1,213 @@
-# UZConnect
+<p align="center">
+  <img src="src/UZConnect.App/Assets/icons/app-icon.png" width="96" height="96" alt="UZConnect" />
+</p>
 
-UZConnect is a Windows desktop manager for the **FY_UZ801_V3.2** USB modem running stock
-firmware **V2.3.11**. The interface is a classic **D-Link Connection Manager** style layout
-(no sidebar, no dashboard cards) with the same seven toolbar sections:
+<h1 align="center">UZConnect</h1>
 
-**Connection · SMS · Contacts · USSD · Statistics · Settings · Help**
+<p align="center">
+  <b>A classic Windows connection manager for the UZ801 4G USB modem</b><br />
+  Connection · SMS · Contacts · USSD · Statistics · Settings · Wi-Fi
+</p>
 
-Wi-Fi Management is the only additional section. It is deliberately kept small and lives
-inside Settings.
+<p align="center">
+  <a href="https://github.com/shamirbaral5180/UZConnect_App/releases/latest">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/shamirbaral5180/UZConnect_App?label=release&color=2E75B6" />
+  </a>
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0B5FA5?logo=windows" />
+  <img alt=".NET" src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet" />
+  <img alt="WPF" src="https://img.shields.io/badge/UI-WPF-2E75B6" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-30%20passing-4C9A2A" />
+  <img alt="Firmware" src="https://img.shields.io/badge/stock%20firmware-V2.3.11-4C9A2A" />
+</p>
 
-## Verified hardware
+<p align="center">
+  <a href="#-download"><b>Download</b></a> ·
+  <a href="#-screenshots"><b>Screenshots</b></a> ·
+  <a href="#-features"><b>Features</b></a> ·
+  <a href="#-wi-fi-management"><b>Wi‑Fi</b></a> ·
+  <a href="#-build-from-source"><b>Build</b></a> ·
+  <a href="docs/WIFI-MANAGEMENT.md"><b>Docs</b></a>
+</p>
 
-| Item | Verified value |
+---
+
+## Why UZConnect?
+
+The **FY_UZ801_V3.2** is a small Qualcomm MSM8916 LTE dongle that ships with a stripped
+Android build and a basic web page. UZConnect gives it the desktop manager it should have
+had: a classic D‑Link‑style window with real SMS, USSD, APN and Wi‑Fi tools — no browser,
+no firmware flashing, no vendor cloud.
+
+> **Design rule:** the app never claims a change it has not read back from the modem.
+> Wi‑Fi settings are backed up, applied, verified in both the active and saved configuration,
+> and rolled back automatically if verification fails.
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/images/wifi-status.png" width="720" alt="Wi-Fi status with the large power toggle" />
+</p>
+
+<p align="center">
+  <img src="docs/images/wifi-settings.png" width="720" alt="Wireless settings, AP security and visibility" />
+</p>
+
+---
+
+## ⬇ Download
+
+**[Download the latest release »](https://github.com/shamirbaral5180/UZConnect_App/releases/latest)**
+
+| | |
 |---|---|
-| USB identity | `VID_05C6 PID_90B6` (Qualcomm USB Composite Device 90B6) |
-| Android | 4.4.4 (API 19) |
-| Model | UZ801 |
-| Firmware | V2.3.11 |
-| Baseband | N958St_Z85_CN_JSXPH1IDN1H213 |
-| Interfaces | RNDIS, HS-USB Modem, HS-USB Diagnostics (COM12), ADB |
-| ADB | Authorized; shell runs as root on the tested stock image |
-| SIM tested | Ncell Nepal, READY, LTE registration |
-| SMS | Inbox read/sync and send verified through the Android SMS provider/helper |
+| Package | `UZConnect-0.1.0-win-x64.zip` (self-contained) |
+| Size | ~62 MB |
+| Requirements | Windows 10/11 x64 · UZ801 modem over USB · ADB authorized |
+| Runtime | None — .NET 10 is bundled |
+| Verified on | FY_UZ801_V3.2 · stock firmware V2.3.11 |
 
-Hardware identity is discovered at runtime. No VID/PID is hard-coded into the application.
-See `docs/HARDWARE-REPORT.md` for the complete Phase 1 investigation and test evidence.
+1. Unzip anywhere and run `UZConnect.exe`.
+2. Plug in the modem and wait for **Device ready**.
+3. If ADB is not detected, open **Settings → General** and point UZConnect at `adb.exe`.
+4. SMS sending needs the bundled helper; install it once from **Settings → General**.
 
-## Running
+---
 
-Requirements:
+## ✨ Features
 
-- Windows 10/11
-- .NET 10 SDK / runtime
-- Android platform-tools (`adb.exe`) installed, or set the path in **Settings**
-- The UZ801 connected by USB
-
-```powershell
-dotnet build src\UZConnect.App\UZConnect.App.csproj -c Release
-dotnet run --project src\UZConnect.App\UZConnect.App.csproj -c Release
-```
-
-The built executable is at `src\UZConnect.App\bin\Release\net10.0-windows\UZConnect.exe`.
-
-### SMS helper
-
-Reading and deleting SMS uses the device's Android SMS provider through ADB. Sending needs
-the small helper app in `tools\agent` because the stock shell has no supported SmsManager
-entry point. The helper can be installed from the SMS composer; it has no UI, no network
-permission and no background polling. Build it with:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\agent\build-agent.ps1
-```
-
-The signed APK is embedded into the UZConnect output automatically when present.
-
-## Functional status
-
-| Feature | Status |
+| Area | What you get |
 |---|---|
-| USB arrival/removal and ADB detection | Working, verified on hardware |
-| Connection status, IP, operator, signal | Working |
-| Connect / Disconnect | Working through the stock modem control channel (`funcNo 1004`) |
-| APN profile management | Working through the stock modem profile table (Profile Management) |
-| SMS Inbox/Outbox/Draft/Recycle | Working; Recycle is a local archive |
-| SMS compose, reply, forward, export, multi-select | Working |
-| SMS sending | Working through the helper agent; the app waits for the final result and confirms against the device Sent folder, so an Android 4.4 generic-failure report does not show a false failure. Verified by self-test. |
-| Statistics (speeds, totals, chart) | Working from modem counters |
-| USSD command list and send | Working through the modem AT command port (`AT+CUSD`). Menu replies are supported: after a menu the Send button becomes Reply and the same input box accepts option numbers. The app temporarily uses 3G for USSD because this modem rejects CUSD over LTE, keeps 3G while a menu is open, and restores the saved network mode when the session ends or is cancelled. Balance check was verified on the Ncell SIM. |
-| Contacts | Read-only SIM phonebook (the requested scope omits contact management) |
-| PIN management | Displayed as unsupported; no PIN write is attempted |
-| Wi-Fi status | Working: active AP state, saved state and the running access-point process must all agree |
-| Wi-Fi details | Working: network name, security, channel, broadcast state, password presence, address ranges and connected clients |
-| Wi-Fi client list | Working: device name, IP and MAC of associated Wi-Fi clients only |
-| Wi-Fi settings change | Verified on hardware: name and maximum-device limit are backed up, applied, confirmed in active and saved state, and restored on failure |
-| Wi-Fi ON/OFF | Not supported by this stock image: the vendor watchdog re-enables the access point, and an interface-only attempt was also reverted within one interval. The UI disables the control |
-| Wi-Fi password change | Blocked: the vendor setter writes the supplied password to the Android log, so a secure change cannot be guaranteed |
-| Wi-Fi channel / hidden SSID / MAC filtering / DHCP / reservations | Shown read-only or disabled; the stock controls were inspected and do not apply or cannot be verified |
-| Diagnostic report | Available as a redacted export; normal UI contains no USB IDs, COM ports, ADB details or debug logs |
+| **Connection** | Live operator, network type, signal, data session, IP, duration, speed graph, connect/disconnect |
+| **APN** | Profile list, create/edit, NTC and Ncell defaults, manual connect |
+| **SMS** | Inbox/Sent/Drafts/Recycle, selection and select‑all, confirmed multi‑delete, classic Edit dialog, compose/reply/forward/export, delivery reports |
+| **USSD** | Saved command list, balance and menu replies, temporary 3G switching for USSD and automatic restore |
+| **Contacts** | Read‑only SIM phonebook (by design) |
+| **Statistics** | Live upload/download rates, totals, session time |
+| **Wi‑Fi** | Router‑style page: status, network name, device limit, security/channel/broadcast, connected clients, DHCP ranges |
+| **Diagnostics** | Redacted report export; no passwords, SMS bodies or full IMEIs |
 
-## Architecture
+### Status at a glance
 
+| Capability | State |
+|---|---|
+| USB detection, ADB, device/SIM/network info | ✅ Verified |
+| Mobile data, APN profiles (NTC / Ncell) | ✅ Verified |
+| SMS read, send, delete, recycle | ✅ Verified |
+| USSD balance and interactive menus | ✅ Verified |
+| Wi‑Fi status, client list, DHCP ranges | ✅ Verified |
+| Wi‑Fi name and maximum devices | ✅ Verified with backup, verification and rollback |
+| Wi‑Fi ON/OFF, password, hidden SSID | ⛔ Disabled — blocked by stock firmware |
+| Channel, security mode, DHCP/DNS editing | 👁 Read‑only |
+
+---
+
+## 📶 Wi‑Fi Management
+
+The Wi‑Fi section is a self‑contained router‑style page: blue header, grouped navigation,
+underlined section titles and light tables. It shows the real access‑point state, the network
+name, connected devices with IP and MAC, and the active DHCP ranges.
+
+**Saving the network name or device limit** runs a transaction:
+
+1. Read and verify the current state.
+2. Back up `mificonfig.json`, `hostapd.conf` and `softap.conf` with hashes.
+3. Apply and restart the access point.
+4. Require three agreeing observations across a watchdog interval — active config, saved
+   config, vendor status, `hostapd` and `rndis0`.
+5. On failure, restore the backup and verify it again.
+
+**Wi‑Fi ON/OFF, password changes and hidden SSID are intentionally disabled.** On stock
+V2.3.11 the vendor service re‑asserts its own in‑memory settings on every bind, and the
+networking service writes the WPA passphrase to the Android log during every access‑point
+start. No safe, durable control exists without modifying system components, so UZConnect
+shows the controls disabled with the reason instead of faking success.
+
+> Full evidence and the required system changes: **[docs/WIFI-MANAGEMENT.md](docs/WIFI-MANAGEMENT.md)**
+
+---
+
+## 🧱 Architecture
+
+```mermaid
+flowchart LR
+    UI[WPF Views] --> VM[ViewModels]
+    VM --> S[ModemSession]
+    S --> USB[USB / WMI detection]
+    S --> ADB[ADB transport]
+    S --> WEB[Stock web control]
+    S --> AT[AT / USSD port]
+    S --> DB[(SQLite cache)]
+    ADB --> SMS[SMS provider]
+    ADB --> HELP[SMS helper APK]
+    ADB --> WIFI[Wi-Fi helper JAR]
 ```
-src/UZConnect.Core          Contracts, models, SMS segment logic, parsers
-src/UZConnect.Windows       USB/WMI discovery, ADB, stock web control, SQLite, session
-src/UZConnect.App           WPF classic Connection Manager UI (MVVM)
-tools/agent                 Android SMS helper source and APK build
-tools/wifi                  Root Wi-Fi state helper and the hardware qualification harness
-tools/probe                 Console hardware probe used during Phase 1
-tests/UZConnect.Tests       Unit tests
-docs                        Hardware report, UI reference notes, verification
-```
 
-The UI never talks to hardware directly. `ModemSession` owns detection, the providers and the
-cache. The ADB provider remains the verified transport for SMS, device information and SIM
-status. The stock RNDIS web control channel is used only for modem functions not exposed by
-ADB (connection mode, APN profiles, traffic counters, Wi-Fi status). USB detection and SMS do
-not depend on Wi-Fi or on the web interface.
+- `UZConnect.Core` — contracts, models, SMS segment logic, parsers
+- `UZConnect.Windows` — USB discovery, ADB, stock control channel, serial USSD, SQLite, session
+- `UZConnect.App` — WPF MVVM interface in the classic Connection Manager style
+- `tools/agent` — minimal Android SMS helper
+- `tools/wifi` — root Wi‑Fi state helper and hardware qualification harness
+- `tests` — 30 unit tests
 
-## Data and security
+The UI never touches hardware directly; every transport sits behind `ModemSession`.
 
-- Local data lives in `%LOCALAPPDATA%\UZConnect` (SQLite cache, logs, exports).
-- SMS bodies and full IMEIs are never written to logs.
+---
+
+## 🔒 Safety and privacy
+
+- **No firmware flashing, partition writes, bootloader changes or rooting.**
+- SMS deletion is confirmed first and copied to a local Recycle bin.
+- Wi‑Fi passwords are never displayed, logged or exported.
+- SMS bodies, phone numbers and full IMEIs are never written to logs.
 - IMEI is masked by default.
-- Deletion is confirmed first; messages are copied to the local Recycle before removal from
-  the modem.
-- No firmware flashing, partition writes, rooting, bootloader changes or automatic firmware
-  modification is performed.
-- Wi-Fi changes use the stock vendor control channel, are backed up first, and are verified on the
-  modem; see `docs/WIFI-MANAGEMENT.md`. Password changes and Wi-Fi ON/OFF are not offered because
-  the firmware cannot apply them securely or reliably.
+- The bundled Android helper is a normal app installed over ADB; it is not part of the firmware.
 
-## UI reference
+---
 
-The layout was reproduced from the supplied D-Link Connection Manager screenshots and the
-DWM-222 user manual. See `docs/UI-REFERENCE.md` for the screen-by-screen mapping and the
-intentional differences (UZConnect branding, Wi-Fi Management, read-only contacts).
+## 🛠 Build from source
+
+**Prerequisites:** .NET 10 SDK, Windows 10/11, Android platform‑tools for `adb.exe`.
+
+```powershell
+git clone https://github.com/shamirbaral5180/UZConnect_App.git
+cd UZConnect_App
+dotnet build UZConnect.slnx -c Release
+dotnet test tests\UZConnect.Tests\UZConnect.Tests.csproj -c Release
+```
+
+Build the Wi‑Fi helper (optional, the jar is committed):
+
+```powershell
+powershell -File tools/wifi/build.ps1
+```
+
+Publish a self‑contained build:
+
+```powershell
+dotnet publish src\UZConnect.App\UZConnect.App.csproj -c Release -r win-x64 --self-contained true -o artifacts\UZConnect-win-x64
+```
+
+---
+
+## 📚 Documentation
+
+| Document | Contents |
+|---|---|
+| [Hardware report](docs/HARDWARE-REPORT.md) | USB identity, ADB, SMS, USSD and stock control‑channel evidence |
+| [Wi‑Fi management](docs/WIFI-MANAGEMENT.md) | Verified mechanisms, qualification results, blockers and required changes |
+| [UI reference](docs/UI-REFERENCE.md) | Layout and asset notes from the D‑Link Connection Manager |
+| [Release notes](docs/RELEASE-NOTES-0.1.0.md) | What ships in 0.1.0 and what is deliberately disabled |
+
+---
+
+## ⚠️ Disclaimer
+
+UZConnect is an independent project, not affiliated with the modem vendor or D‑Link.
+It targets **stock firmware V2.3.11** and is tested on one **FY_UZ801_V3.2** unit.
+Use at your own risk; keep a working ADB connection before changing network settings.
+
+<p align="center">
+  <sub>Built with C# · .NET 10 · WPF · MVVM</sub>
+</p>
