@@ -36,7 +36,7 @@ public class AdbParserTests
     {
         const string output = """
             List of devices attached
-            0123456789ABCDEF       device product:msm8916_32_512 model:UZ801 device:msm8916_32_512 transport_id:1
+            TESTSERIAL000001       device product:msm8916_32_512 model:UZ801 device:msm8916_32_512 transport_id:1
             other                  unauthorized transport_id:2
 
             """;
