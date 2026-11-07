@@ -33,6 +33,7 @@ public sealed class ModemSession : IDisposable
     private readonly SerialUssdService _serialUssd;
     private readonly SerialAtModemProvider _serialProvider;
     private readonly MifiWebClient _mifi;
+    private readonly WifiManagementService _wifiManagement;
     private readonly UssdService _ussd;
     private readonly SqliteMessageStore _messageStore;
     private readonly SqliteSettingsStore _settings;
@@ -62,6 +63,7 @@ public sealed class ModemSession : IDisposable
         _adbProvider = new AdbModemProvider(_adb, _usb, _log);
         _serialProvider = new SerialAtModemProvider(_usb, _log);
         _mifi = new MifiWebClient(_adb, _log);
+        _wifiManagement = new WifiManagementService(_adb, _mifi);
         _ussd = new UssdService(_adb, _log);
         _serialUssd = new SerialUssdService(_log);
         _messageStore = new SqliteMessageStore();
@@ -94,7 +96,7 @@ public sealed class ModemSession : IDisposable
     public MifiTraffic? MifiTraffic { get; private set; }
     public MifiConnectionInfo? MifiConnection { get; private set; }
     public MifiWifiStatus? WifiStatus { get; private set; }
-    public bool WifiControlSupported => true;
+    public bool WifiControlSupported => false;
     public double RxRateKbps { get; private set; }
     public double TxRateKbps { get; private set; }
     public DateTimeOffset? SessionStart => _connectedSince;
@@ -433,70 +435,21 @@ public sealed class ModemSession : IDisposable
         }
     }
 
-    public async Task<WifiControlResult> SetWifiEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
+    public Task<WifiControlResult> SetWifiEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
+        => Task.FromResult(new WifiControlResult(false, WifiStatus?.Enabled ?? false,
+            "Reliable Wi-Fi switching is not available on this modem. No changes were made."));
+
+    public Task<WifiSnapshot> ReadWifiManagementAsync(CancellationToken cancellationToken = default)
+        => _wifiManagement.ReadAsync(ActiveDevice?.AdbSerial
+            ?? throw new InvalidOperationException("Connect the modem to view Wi-Fi settings."), cancellationToken);
+
+    public async Task<WifiChangeResult> ApplyWifiBasicAsync(WifiBasicSettings settings, CancellationToken cancellationToken = default)
     {
         var serial = ActiveDevice?.AdbSerial
-                     ?? throw new InvalidOperationException("Connect the modem before changing Wi-Fi.");
-        if (!await IsHostapdRunningAsync(serial, cancellationToken).ConfigureAwait(false))
-        {
-            if (!enabled)
-            {
-                return new WifiControlResult(true, false, "Wi-Fi is already off.");
-            }
-
-            var start = await _adb.ShellAsync(
-                serial,
-                "nohup /system/bin/hostapd -B -e /data/misc/wifi/entropy.bin /data/misc/wifi/hostapd.conf >/dev/null 2>&1 &",
-                TimeSpan.FromSeconds(10),
-                cancellationToken).ConfigureAwait(false);
-            await Task.Delay(1500, cancellationToken).ConfigureAwait(false);
-            var running = await IsHostapdRunningAsync(serial, cancellationToken).ConfigureAwait(false);
-            if (running)
-            {
-                _log.Info("WiFi", "Wi-Fi access point started with the stock hostapd binary.");
-                await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
-                return new WifiControlResult(true, true, "Wi-Fi turned on.");
-            }
-
-            return new WifiControlResult(false, false,
-                "The stock hostapd process could not be started. " +
-                FirstLine(start.StandardError));
-        }
-
-        if (enabled)
-        {
-            return new WifiControlResult(true, true, "Wi-Fi is already on.");
-        }
-
-        var ps = await _adb.ShellTextAsync(serial, "ps | grep hostapd", TimeSpan.FromSeconds(5), cancellationToken)
-            .ConfigureAwait(false);
-        var pid = ps.Split('\n')
-            .Select(line => line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            .Where(parts => parts.Length >= 2 && parts.Any(p => p.Contains("/system/bin/hostapd", StringComparison.Ordinal)))
-            .Select(parts => parts[1])
-            .FirstOrDefault();
-
-        if (string.IsNullOrWhiteSpace(pid))
-        {
-            return new WifiControlResult(false, true, "Could not identify the Wi-Fi access point process.");
-        }
-
-        await _adb.ShellAsync(serial, $"kill -TERM {pid}", TimeSpan.FromSeconds(5), cancellationToken)
-            .ConfigureAwait(false);
-        await Task.Delay(5000, cancellationToken).ConfigureAwait(false);
-        var stillRunning = await IsHostapdRunningAsync(serial, cancellationToken).ConfigureAwait(false);
-        if (stillRunning)
-        {
-            return new WifiControlResult(false, true,
-                "The stock firmware restarted the Wi-Fi access point. Turning Wi-Fi OFF is not supported by this firmware.");
-        }
-
-        _log.Info("WiFi", "Wi-Fi access point stopped via the stock hostapd process.");
-        WifiStatus = WifiStatus is null
-            ? new MifiWifiStatus(false, "Not available", 0, 0, 0)
-            : WifiStatus with { Enabled = false };
-        RaiseState("wifi");
-        return new WifiControlResult(true, false, "Wi-Fi turned off.");
+            ?? throw new InvalidOperationException("Connect the modem before changing Wi-Fi.");
+        await _actionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await _wifiManagement.ApplyBasicAsync(serial, settings, cancellationToken).ConfigureAwait(false); }
+        finally { _actionGate.Release(); }
     }
 
     private async Task<bool> IsHostapdRunningAsync(string serial, CancellationToken cancellationToken)

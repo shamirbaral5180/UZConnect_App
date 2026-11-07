@@ -152,6 +152,16 @@ Tests:
 Therefore UZConnect shows Wi-Fi status and a real ON action, while OFF reports that the stock
 firmware restarts the access point. This is deliberately not faked.
 
+### 6b. Wi-Fi management (implemented)
+
+Later tests established that the vendor service restarts the AP from a 20-second alarm, and that
+an interface-only OFF is also reverted within one interval. UZConnect therefore disables Wi-Fi
+ON/OFF. The same investigation found working name and maximum-client settings, which are now
+offered through a backed-up, verified transaction; the vendor password setter was rejected because
+it writes the supplied password to the Android log. Client names, IPs, MACs and the active DHCP
+ranges are displayed read-only. Details and the qualification results are in
+`docs/WIFI-MANAGEMENT.md`.
+
 ## 7. Other observations
 
 - The only confirmed serial endpoint used by the app is the Qualcomm modem command port on

@@ -1,0 +1,166 @@
+using System.Text.Json;
+using UZConnect.Core.Models;
+using UZConnect.Windows.Adb;
+
+namespace UZConnect.Windows.Mifi;
+
+/// <summary>Uses the root helper's allowlisted output, never raw password-bearing configuration.</summary>
+public sealed class WifiManagementService(AdbClient adb, MifiWebClient mifi)
+{
+    private const string RemoteJar = "/data/local/tmp/uzconnect-wifi.jar";
+    private readonly MifiWebClient _mifi = mifi;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
+    public async Task<WifiSnapshot> ReadAsync(string serial, CancellationToken cancellationToken = default)
+    {
+        if (!await _gate.WaitAsync(TimeSpan.FromSeconds(60), cancellationToken).ConfigureAwait(false))
+            throw new TimeoutException("A previous Wi-Fi operation is still running.");
+        try
+        {
+            await EnsureHelperAsync(serial, cancellationToken).ConfigureAwait(false);
+            return WifiSnapshot.Parse(await RunAsync(serial, "read", cancellationToken).ConfigureAwait(false));
+        }
+        finally { _gate.Release(); }
+    }
+
+    // A hardware-qualification caller can use the same transaction as the UI, without weakening its release gate.
+    public async Task<WifiChangeResult> QualifyBasicChangeAsync(string serial, WifiBasicSettings settings,
+        CancellationToken cancellationToken = default)
+        => await QualifyAsync(serial, settings, injectVerificationFailure: false, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>
+    /// Hardware fault injection: the first check of the new settings is reported as failed so the
+    /// real save, restart and restore path is exercised. Qualification harness only.
+    /// </summary>
+    public async Task<WifiChangeResult> QualifyRollbackAsync(string serial, WifiBasicSettings settings,
+        CancellationToken cancellationToken = default)
+        => await QualifyAsync(serial, settings, injectVerificationFailure: true, cancellationToken).ConfigureAwait(false);
+
+    private async Task<WifiChangeResult> QualifyAsync(string serial, WifiBasicSettings settings,
+        bool injectVerificationFailure, CancellationToken cancellationToken)
+    {
+        if (!await _gate.WaitAsync(TimeSpan.FromSeconds(60), cancellationToken).ConfigureAwait(false))
+            throw new TimeoutException("A previous Wi-Fi operation is still running.");
+        try
+        {
+            await EnsureHelperAsync(serial, cancellationToken).ConfigureAwait(false);
+            return await new WifiBasicChange(new Device(this, serial, injectVerificationFailure))
+                .ApplyAsync(settings, cancellationToken).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public Task<WifiChangeResult> ApplyBasicAsync(string serial, WifiBasicSettings settings,
+        CancellationToken cancellationToken = default) => WifiCapabilities.BasicChangesVerified
+        ? QualifyBasicChangeAsync(serial, settings, cancellationToken)
+        : Task.FromResult(new WifiChangeResult(WifiChangeOutcome.Rejected,
+            "Saving is unavailable until modem verification and recovery checks are complete."));
+
+    // Qualification-only: returns saved values so a harness can diagnose without printing secrets.
+    public async Task<WifiBasicSettings> ReadSavedAsync(string serial, CancellationToken cancellationToken = default)
+    {
+        using var doc = JsonDocument.Parse(await RunAsync(serial, "saved", cancellationToken).ConfigureAwait(false));
+        return new(doc.RootElement.GetProperty("ssid").GetString() ?? "",
+            doc.RootElement.GetProperty("maximumClients").GetInt32());
+    }
+
+    public async Task<WifiBasicSettings> ReadBackupAsync(string serial, string backupId,
+        CancellationToken cancellationToken = default)
+    {
+        if (backupId.Any(c => !Uri.IsHexDigit(c)) || backupId.Length != 32) throw new InvalidOperationException();
+        using var doc = JsonDocument.Parse(await RunAsync(serial, "original " + backupId, cancellationToken).ConfigureAwait(false));
+        return new(doc.RootElement.GetProperty("ssid").GetString() ?? "",
+            doc.RootElement.GetProperty("maximumClients").GetInt32());
+    }
+
+    private async Task EnsureHelperAsync(string serial, CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", "uzconnect-wifi.jar");
+        if (!File.Exists(path)) throw new InvalidOperationException("Wi-Fi support files are missing. Reinstall UZConnect.");
+        // Re-push after every entry: reconnection/reboot and helper version changes must not reuse an unknown binary.
+        var result = await adb.RunAsync(["-s", serial, "push", path, RemoteJar], TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
+        if (!result.Success) throw new IOException("Wi-Fi information could not be read.");
+    }
+
+    private async Task<string> RunAsync(string serial, string arguments, CancellationToken cancellationToken)
+    {
+        var result = await adb.ShellAsync(serial,
+            $"CLASSPATH={RemoteJar} app_process /system/bin WifiProbe {arguments}",
+            TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!result.Success) throw new IOException("Wi-Fi information could not be read.");
+        var json = result.StandardOutput.Split('\n').FirstOrDefault(l => l.TrimStart().StartsWith('{'));
+        if (json is null) throw new IOException("Wi-Fi information could not be read.");
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("ok", out var ok) || ok.ValueKind != JsonValueKind.True)
+            throw new IOException("Wi-Fi information could not be read.");
+        return json;
+    }
+
+    private sealed class Device(WifiManagementService owner, string serial, bool injectVerificationFailure = false)
+        : IWifiBasicChangeDevice
+    {
+        private int _verifications;
+        public async Task<WifiBasicSettings> ReadSavedAsync(CancellationToken cancellationToken)
+        {
+            using var doc = JsonDocument.Parse(await owner.RunAsync(serial, "saved", cancellationToken).ConfigureAwait(false));
+            return new(doc.RootElement.GetProperty("ssid").GetString() ?? "",
+                doc.RootElement.GetProperty("maximumClients").GetInt32());
+        }
+
+        public async Task<string> BackupAsync(CancellationToken cancellationToken)
+        {
+            var id = Guid.NewGuid().ToString("N");
+            using var doc = JsonDocument.Parse(await owner.RunAsync(serial, "backup " + id, cancellationToken).ConfigureAwait(false));
+            if (doc.RootElement.GetProperty("backupId").GetString() != id) throw new IOException();
+            return id;
+        }
+
+        public async Task SaveAsync(WifiBasicSettings settings, CancellationToken cancellationToken)
+        {
+            if (settings.ValidationError is not null) throw new IOException();
+            await owner._mifi.SetWifiBasicAsync(serial, settings, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            // A lost HTTP response is not proof of failure, just as a success flag is not proof of application.
+            if (await ReadSavedAsync(cancellationToken).ConfigureAwait(false) != settings)
+                throw new IOException("Saved settings did not match.");
+        }
+
+        public async Task RestartAccessPointAsync(CancellationToken cancellationToken)
+        {
+            await owner._mifi.RestartWifiAsync(serial, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            // The restart may outlive the HTTP request. VerifyAsync decides the result from actual state.
+        }
+
+        public async Task<bool> VerifyAsync(WifiBasicSettings settings, CancellationToken cancellationToken)
+        {
+            _verifications++;
+            if (injectVerificationFailure && _verifications == 2)
+            {
+                // Simulates a change that the modem acknowledged but did not apply.
+                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+                return false;
+            }
+
+            // Require three stable observations across more than one watchdog interval.
+            var stable = 0;
+            for (var i = 0; i < 8; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var active = WifiSnapshot.Parse(await owner.RunAsync(serial, "read", cancellationToken).ConfigureAwait(false));
+                var saved = await ReadSavedAsync(cancellationToken).ConfigureAwait(false);
+                var status = await owner._mifi.GetWifiStatusAsync(serial, cancellationToken).ConfigureAwait(false);
+                if (active.ApState == 13 && active.HostapdRunning && active.ConfigurationAvailable && active.RndisBridged &&
+                    active.Ssid == settings.Ssid && active.MaximumClients == settings.MaximumClients && saved == settings &&
+                    status is { Enabled: true } && status.Ssid == settings.Ssid && status.MaxClients == settings.MaximumClients)
+                {
+                    if (++stable == 3) return true;
+                }
+                else stable = 0;
+                await Task.Delay(TimeSpan.FromSeconds(11), cancellationToken).ConfigureAwait(false);
+            }
+            return false;
+        }
+    }
+}

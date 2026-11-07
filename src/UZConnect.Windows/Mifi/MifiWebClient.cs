@@ -152,6 +152,21 @@ public sealed partial class MifiWebClient : IDisposable
         return profiles;
     }
 
+    internal async Task<bool> SetWifiBasicAsync(string serial, UZConnect.Core.Models.WifiBasicSettings settings,
+        CancellationToken cancellationToken)
+    {
+        if (settings.ValidationError is not null) return false;
+        using var doc = await PostAsync(serial, new { funcNo = 1007, ssid = settings.Ssid, maxSta = settings.MaximumClients }, cancellationToken)
+            .ConfigureAwait(false);
+        return doc is not null && Success(doc);
+    }
+
+    internal async Task<bool> RestartWifiAsync(string serial, CancellationToken cancellationToken)
+    {
+        using var doc = await PostAsync(serial, new { funcNo = 1008 }, cancellationToken).ConfigureAwait(false);
+        return doc is not null && Success(doc);
+    }
+
     public async Task<bool> SaveProfileAsync(string serial, MifiProfile profile, CancellationToken cancellationToken = default)
     {
         using var doc = await PostAsync(serial, new

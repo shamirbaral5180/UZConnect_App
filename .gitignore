@@ -12,6 +12,7 @@
 *.log
 
 # Agent build intermediates
+tools/wifi/out/work/
 tools/agent/out/work/
 tools/agent/out/*.idsig
 

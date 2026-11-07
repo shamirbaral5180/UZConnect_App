@@ -51,6 +51,7 @@ public sealed class SettingsViewModel : ObservableObject, IPageViewModel
     public SettingsViewModel(ModemSession session)
     {
         _session = session;
+        Wifi = new WifiManagementViewModel(session);
         BrowseAdbCommand = new RelayCommand(BrowseAdb);
         ApplyAdbCommand = new AsyncRelayCommand(ApplyAdbAsync, () => !IsBusy, ReportError);
         InstallAgentCommand = new AsyncRelayCommand(InstallAgentAsync, () => IsConnected && !IsBusy, ReportError);
@@ -61,8 +62,8 @@ public sealed class SettingsViewModel : ObservableObject, IPageViewModel
         OpenLogsFolderCommand = new RelayCommand(() => OpenFolder(AppPaths.LogsDirectory));
         ExportReportCommand = new AsyncRelayCommand(ExportAsync, onError: ReportError);
         RefreshCommand = new AsyncRelayCommand(() => RefreshAsync(), onError: ReportError);
-        WifiOnCommand = new AsyncRelayCommand(() => SetWifiAsync(true), () => !WifiBusy, ReportError);
-        WifiOffCommand = new AsyncRelayCommand(() => SetWifiAsync(false), () => !WifiBusy, ReportError);
+        WifiOnCommand = new AsyncRelayCommand(() => SetWifiAsync(true), () => false, ReportError);
+        WifiOffCommand = new AsyncRelayCommand(() => SetWifiAsync(false), () => false, ReportError);
         RefreshWifiCommand = new AsyncRelayCommand(RefreshWifiAsync, onError: ReportError);
         SaveProfileCommand = new AsyncRelayCommand(SaveProfileAsync, () => !IsBusy, ReportError);
         ConnectProfileCommand = new AsyncRelayCommand(ConnectProfileAsync, () => !IsBusy, ReportError);
@@ -128,12 +129,13 @@ public sealed class SettingsViewModel : ObservableObject, IPageViewModel
             {
                 OnPropertyChanged(nameof(SelectedSectionKey));
                 if (value.Key == "Profiles") _ = RefreshProfilesAsync();
-                if (value.Key == "WiFi") _ = RefreshWifiAsync();
+                if (value.Key == "WiFi") _ = Wifi.RefreshAsync();
             }
         }
     }
 
     public string SelectedSectionKey => SelectedSection?.Key ?? "General";
+    public WifiManagementViewModel Wifi { get; }
     public string WifiStatusText
     {
         get => _wifiStatusText;
@@ -509,6 +511,7 @@ public sealed class SettingsViewModel : ObservableObject, IPageViewModel
 
     public async Task RefreshFromSessionAsync(CancellationToken cancellationToken = default)
     {
+        Wifi.ConnectionChanged();
         UpdateDiagnostics();
         WifiStatusText = _session.WifiStatus is null ? WifiStatusText : _session.WifiStatus.Enabled ? "ON" : "OFF";
         Raise(nameof(IsConnected), nameof(AgentStatusText), nameof(AdbDetectedPath), nameof(DiagnosticsText));

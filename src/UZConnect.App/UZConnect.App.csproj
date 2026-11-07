@@ -22,6 +22,7 @@
     <Resource Include="Assets\uzconnect.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\tools\wifi\out\uzconnect-wifi.jar" Link="Assets\uzconnect-wifi.jar" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\tools\wifi\out\uzconnect-wifi.jar')" />
     <None Include="..\..\tools\agent\out\uzconnect-agent.apk" Link="Assets\uzconnect-agent.apk" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\tools\agent\out\uzconnect-agent.apk')" />
   </ItemGroup>
 </Project>

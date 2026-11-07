@@ -70,9 +70,13 @@ The signed APK is embedded into the UZConnect output automatically when present.
 | USSD command list and send | Working through the modem AT command port (`AT+CUSD`). Menu replies are supported: after a menu the Send button becomes Reply and the same input box accepts option numbers. The app temporarily uses 3G for USSD because this modem rejects CUSD over LTE, keeps 3G while a menu is open, and restores the saved network mode when the session ends or is cancelled. Balance check was verified on the Ncell SIM. |
 | Contacts | Read-only SIM phonebook (the requested scope omits contact management) |
 | PIN management | Displayed as unsupported; no PIN write is attempted |
-| Wi-Fi status | Working from the stock hostapd state |
-| Wi-Fi ON | Working (starts the stock hostapd process if stopped) |
-| Wi-Fi OFF | Not supported by this stock image: the vendor service automatically restarts hostapd. The UI reports this failure instead of pretending success |
+| Wi-Fi status | Working: active AP state, saved state and the running access-point process must all agree |
+| Wi-Fi details | Working: network name, security, channel, broadcast state, password presence, address ranges and connected clients |
+| Wi-Fi client list | Working: device name, IP and MAC of associated Wi-Fi clients only |
+| Wi-Fi settings change | Verified on hardware: name and maximum-device limit are backed up, applied, confirmed in active and saved state, and restored on failure |
+| Wi-Fi ON/OFF | Not supported by this stock image: the vendor watchdog re-enables the access point, and an interface-only attempt was also reverted within one interval. The UI disables the control |
+| Wi-Fi password change | Blocked: the vendor setter writes the supplied password to the Android log, so a secure change cannot be guaranteed |
+| Wi-Fi channel / hidden SSID / MAC filtering / DHCP / reservations | Shown read-only or disabled; the stock controls were inspected and do not apply or cannot be verified |
 | Diagnostic report | Available as a redacted export; normal UI contains no USB IDs, COM ports, ADB details or debug logs |
 
 ## Architecture
@@ -82,6 +86,7 @@ src/UZConnect.Core          Contracts, models, SMS segment logic, parsers
 src/UZConnect.Windows       USB/WMI discovery, ADB, stock web control, SQLite, session
 src/UZConnect.App           WPF classic Connection Manager UI (MVVM)
 tools/agent                 Android SMS helper source and APK build
+tools/wifi                  Root Wi-Fi state helper and the hardware qualification harness
 tools/probe                 Console hardware probe used during Phase 1
 tests/UZConnect.Tests       Unit tests
 docs                        Hardware report, UI reference notes, verification
@@ -102,8 +107,9 @@ not depend on Wi-Fi or on the web interface.
   the modem.
 - No firmware flashing, partition writes, rooting, bootloader changes or automatic firmware
   modification is performed.
-- Wi-Fi ON/OFF only manipulates the stock hostapd runtime process and never edits firmware or
-  configuration files.
+- Wi-Fi changes use the stock vendor control channel, are backed up first, and are verified on the
+  modem; see `docs/WIFI-MANAGEMENT.md`. Password changes and Wi-Fi ON/OFF are not offered because
+  the firmware cannot apply them securely or reliably.
 
 ## UI reference
 
