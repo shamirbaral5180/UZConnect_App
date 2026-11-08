@@ -4,7 +4,7 @@ using UZConnect.Windows.Adb;
 
 namespace UZConnect.Windows.Mifi;
 
-/// <summary>Uses the root helper's allowlisted output, never raw password-bearing configuration.</summary>
+/// <summary>Uses the root helper's allowlisted output. The current passphrase is returned only for local display.</summary>
 public sealed class WifiManagementService(AdbClient adb, MifiWebClient mifi)
 {
     private const string RemoteJar = "/data/local/tmp/uzconnect-wifi.jar";
@@ -155,7 +155,7 @@ public sealed class WifiManagementService(AdbClient adb, MifiWebClient mifi)
     {
         var result = await adb.ShellAsync(serial,
             $"CLASSPATH={RemoteJar} app_process /system/bin WifiProbe {arguments}",
-            TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
+            TimeSpan.FromSeconds(45), cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         if (!result.Success) throw new IOException("Wi-Fi information could not be read.");
         var json = result.StandardOutput.Split('\n').FirstOrDefault(l => l.TrimStart().StartsWith('{'));

@@ -42,25 +42,6 @@ public partial class App : Application
         {
             AppPreferences.CloseToTray = await ReadBoolAsync(
                 AppPreferences.SettingCloseToTray, fallback: true);
-            AppPreferences.ConnectOnStart = await ReadBoolAsync(
-                AppPreferences.SettingConnectOnStart, fallback: false);
-            AppPreferences.StartWithWindows = await ReadBoolAsync(
-                AppPreferences.SettingStartWithWindows, fallback: false);
-
-            // Keep the startup entry in sync with the saved preference.
-            if (AppPreferences.StartWithWindows)
-            {
-                StartupRegistration.SetEnabled(true);
-            }
-            else if (StartupRegistration.IsEnabled())
-            {
-                StartupRegistration.SetEnabled(false);
-            }
-
-            if (AppPreferences.ConnectOnStart && AppPreferences.StartMinimized)
-            {
-                _viewModel.EnableAutoConnectOnStart();
-            }
         }
         catch
         {

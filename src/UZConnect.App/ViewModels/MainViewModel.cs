@@ -135,7 +135,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public bool IsConnected => _session.IsConnected;
     public ModemSession Session => _session;
-    public bool IsDataConnected => _session.ConnectionStatus.DataConnected || _session.MifiStatus?.IsConnected == true;
+    public bool IsDataConnected => _session.ConnectionStatus.DataConnected;
     public event Action? ConnectionStateChanged;
 
     /// <summary>Connects mobile data and reports whether a session is actually up.</summary>

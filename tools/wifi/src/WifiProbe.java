@@ -14,7 +14,7 @@ public final class WifiProbe {
     public static void main(String[] args) {
         Thread deadline = new Thread(new Runnable() {
             public void run() {
-                try { Thread.sleep(12000); } catch (InterruptedException ignored) { }
+                try { Thread.sleep(35000); } catch (InterruptedException ignored) { }
                 Runtime.getRuntime().halt(2); // A stuck Binder must not leave a root helper process behind.
             }
         });
@@ -104,6 +104,12 @@ public final class WifiProbe {
             if (config.containsKey("ignore_broadcast_ssid"))
                 result.put("hidden", !"0".equals(config.get("ignore_broadcast_ssid")));
             result.put("passwordConfigured", nonempty(config.get("wpa_passphrase")) || nonempty(config.get("wpa_psk")));
+            // The current passphrase is shown locally, read-only. It is never logged or sent
+            // anywhere: the caller only renders it and drops it when the page is refreshed away.
+            String passphrase = config.get("wpa_passphrase");
+            if (passphrase != null && passphrase.length() >= 8 && passphrase.length() <= 63) {
+                result.put("password", passphrase);
+            }
             String security = "Not available";
             if ("2".equals(config.get("wpa")) && "CCMP".equals(config.get("rsn_pairwise"))) security = "WPA2 / AES";
             else if ("0".equals(config.get("wpa"))) security = "Open";

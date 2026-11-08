@@ -36,20 +36,12 @@
             <Setter Property="Margin" Value="0,3,0,2" />
         </Style>
 
-        <Style x:Key="RouterTextBox" TargetType="TextBox">
+        <Style x:Key="ReadOnlyBox" TargetType="TextBox">
             <Setter Property="Height" Value="22" />
             <Setter Property="Padding" Value="4,0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="BorderBrush" Value="#A9C0D8" />
-            <Setter Property="Background" Value="White" />
-            <Setter Property="Foreground" Value="{StaticResource RouterInk}" />
-        </Style>
-
-        <Style x:Key="RouterCombo" TargetType="ComboBox">
-            <Setter Property="Height" Value="22" />
-            <Setter Property="Width" Value="170" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#C3D2E1" />
+            <Setter Property="Background" Value="#F7FAFD" />
             <Setter Property="Foreground" Value="{StaticResource RouterInk}" />
         </Style>
 
@@ -162,70 +154,6 @@
         <Style x:Key="PageHeader" TargetType="TextBlock" BasedOn="{StaticResource RouterSection}">
             <Setter Property="FontSize" Value="12" />
         </Style>
-
-        <!-- Large power control. Disabled until the firmware can keep the access point off. -->
-        <Style x:Key="PowerToggle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="156" />
-            <Setter Property="Height" Value="46" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Grid>
-                            <Border x:Name="Track" CornerRadius="23" Background="#B9C4CF" />
-                            <Ellipse x:Name="Knob" Width="38" Height="38" Fill="White" HorizontalAlignment="Left"
-                                     Margin="4,0,0,0" />
-                            <TextBlock x:Name="State" Text="OFF" Foreground="White" FontWeight="Bold" FontSize="13"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0" />
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="#4C9A2A" />
-                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
-                                <Setter TargetName="Knob" Property="Margin" Value="0,0,4,0" />
-                                <Setter TargetName="State" Property="Text" Value="ON" />
-                                <Setter TargetName="State" Property="HorizontalAlignment" Value="Left" />
-                                <Setter TargetName="State" Property="Margin" Value="20,0,0,0" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.55" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="VisibilityToggle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="140" />
-            <Setter Property="Height" Value="28" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Grid>
-                            <Border x:Name="Track" CornerRadius="14" Background="#B9C4CF" />
-                            <Ellipse x:Name="Knob" Width="22" Height="22" Fill="White" HorizontalAlignment="Left" Margin="3,0,0,0" />
-                            <TextBlock x:Name="State" Text="Hidden" Foreground="White" FontWeight="Bold" FontSize="11"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="#2E75B6" />
-                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
-                                <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0" />
-                                <Setter TargetName="State" Property="Text" Value="Broadcast" />
-                                <Setter TargetName="State" Property="HorizontalAlignment" Value="Left" />
-                                <Setter TargetName="State" Property="Margin" Value="12,0,0,0" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.55" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid Background="#F5F7FA">
@@ -251,7 +179,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="UZConnect" FontSize="16" FontWeight="Bold" Foreground="White" FontStyle="Italic" />
                     <Border Width="1" Height="16" Background="#66FFFFFF" Margin="10,0" />
-                    <TextBlock Text="Wi-Fi Management" FontSize="12" Foreground="#EAF3FB" VerticalAlignment="Center" />
+                    <TextBlock Text="Wi-Fi Information" FontSize="12" Foreground="#EAF3FB" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="{Binding PageTitle}" Foreground="#D8E8F8" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -269,7 +197,7 @@
             <!-- Router-style section tree -->
             <Border Background="#EDEDED" BorderBrush="#C9C9C9" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="Setup" FontWeight="Bold" FontSize="12"
+                    <TextBlock DockPanel.Dock="Top" Text="Information" FontWeight="Bold" FontSize="12"
                                Foreground="#4A4A4A" Margin="10,10,0,6" />
                     <ListBox ItemsSource="{Binding NavItems}" SelectedItem="{Binding SelectedNav, Mode=TwoWay}"
                              ItemContainerStyle="{StaticResource RouterNav}" Background="Transparent"
@@ -311,20 +239,11 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="170" />
-                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Wi-Fi :" Style="{StaticResource RouterLabel}" />
-                                <ToggleButton Grid.Column="1" Style="{StaticResource PowerToggle}" IsEnabled="{Binding WifiPowerEnabled}"
-                                              IsChecked="{Binding WifiPowerOn, Mode=TwoWay}"
-                                              AutomationProperties.Name="Wi-Fi power" />
-                                <TextBlock Grid.Column="2" Text="{Binding Status}" Margin="14,0,0,0"
-                                           VerticalAlignment="Center" FontWeight="Bold" />
+                                <TextBlock Grid.Column="1" Text="{Binding Status}" FontWeight="Bold" VerticalAlignment="Center" />
                             </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}" BorderThickness="0">
-                            <TextBlock Text="Turning Wi-Fi off disconnects clients. The access point is restored automatically if it does not stay off."
-                                       Foreground="{StaticResource RouterMuted}" TextWrapping="Wrap" />
                         </Border>
 
                         <TextBlock Text="Wireless" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
@@ -339,7 +258,22 @@
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <TextBlock Text="Network Name (SSID) :" Style="{StaticResource RouterLabel}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Ssid}" Style="{StaticResource TableText}" />
+                                <TextBox Grid.Column="1" Style="{StaticResource ReadOnlyBox}" Width="240" HorizontalAlignment="Left"
+                                         IsReadOnly="True" Text="{Binding Ssid, Mode=OneWay}"
+                                         AutomationProperties.Name="Wireless network name" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource RouterRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="Password :" Style="{StaticResource RouterLabel}" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <TextBox Style="{StaticResource ReadOnlyBox}" Width="240" HorizontalAlignment="Left"
+                                             IsReadOnly="True" Text="{Binding Password, Mode=OneWay}"
+                                             AutomationProperties.Name="Wi-Fi password" />
+                                    <TextBlock Text="{Binding PasswordStatus}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{StaticResource RouterMuted}" />
+                                </StackPanel>
                             </Grid>
                         </Border>
                         <Border Style="{StaticResource RouterRow}">
@@ -352,8 +286,22 @@
                         <Border Style="{StaticResource RouterRow}">
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="Encryption Type :" Style="{StaticResource RouterLabel}" />
+                                <TextBlock Grid.Column="1" Text="{Binding EncryptionType}" Style="{StaticResource TableText}" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource RouterRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <TextBlock Text="Channel :" Style="{StaticResource RouterLabel}" />
                                 <TextBlock Grid.Column="1" Text="{Binding Channel}" Style="{StaticResource TableText}" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource RouterRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="SSID Broadcast :" Style="{StaticResource RouterLabel}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Broadcast}" Style="{StaticResource TableText}" />
                             </Grid>
                         </Border>
                         <Border Style="{StaticResource RouterRow}">
@@ -390,273 +338,8 @@
                         </Border>
                         <TextBlock Text="{Binding ReadOnlyNote}" Foreground="{StaticResource RouterMuted}"
                                    TextWrapping="Wrap" Margin="0,12,0,0" />
-                    </StackPanel>
-
-                    <!-- Wireless Settings -->
-                    <StackPanel Visibility="{Binding SelectedPageKey, Converter={StaticResource StringEqualsToVis}, ConverterParameter=WirelessSettings}">
-                        <TextBlock Text="Wireless Settings" Style="{StaticResource PageHeader}" />
-                        <Border Style="{StaticResource RouterRule}" />
-
-                        <Border Style="{StaticResource RouterRow}" Margin="0,6,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Wireless Status :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <RadioButton Content="Enable" IsChecked="{Binding WifiEnabled, Mode=OneWay}" IsEnabled="False" VerticalAlignment="Center" />
-                                    <RadioButton Content="Disable" Margin="22,0,0,0" IsEnabled="False" VerticalAlignment="Center"
-                                                 IsChecked="{Binding WifiDisabled, Mode=OneWay}" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Radio Mode :" Style="{StaticResource RouterLabel}" />
-                                <ComboBox Grid.Column="1" Style="{StaticResource RouterCombo}" IsEnabled="False" SelectedIndex="0">
-                                    <ComboBoxItem Content="Access Point" />
-                                </ComboBox>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Radio Band :" Style="{StaticResource RouterLabel}" />
-                                <ComboBox Grid.Column="1" Style="{StaticResource RouterCombo}" IsEnabled="False" SelectedIndex="0">
-                                    <ComboBoxItem Content="802.11 b/g/n" />
-                                </ComboBox>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="SSID :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" MaxLength="32"
-                                         IsEnabled="{Binding CanEdit}" Text="{Binding Ssid, UpdateSourceTrigger=PropertyChanged}"
-                                         AutomationProperties.Name="Wireless network name" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="SSID Broadcast :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <ToggleButton Style="{StaticResource VisibilityToggle}" IsEnabled="False"
-                                                  IsChecked="{Binding BroadcastEnabled, Mode=OneWay}"
-                                                  AutomationProperties.Name="SSID broadcast" />
-                                    <TextBlock Text="{Binding Broadcast}" Margin="10,0,0,0" VerticalAlignment="Center"
-                                               Foreground="{StaticResource RouterMuted}" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <TextBlock Text="AP Security Settings" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Authentication Type :" Style="{StaticResource RouterLabel}" />
-                                <TextBlock Grid.Column="1" Text="{Binding AuthenticationType}" Style="{StaticResource TableText}" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Encryption Type :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <RadioButton Content="TKIP" IsEnabled="False" VerticalAlignment="Center" />
-                                    <RadioButton Content="AES" Margin="18,0,0,0" IsEnabled="False" VerticalAlignment="Center"
-                                                 IsChecked="{Binding IsAes, Mode=OneWay}" />
-                                    <RadioButton Content="TKIP&amp;AES" Margin="18,0,0,0" IsEnabled="False" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Password :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <PasswordBox Width="170" Height="22" IsEnabled="False" VerticalContentAlignment="Center"
-                                                 AutomationProperties.Name="New Wi-Fi password" />
-                                    <ToggleButton Content="Show" Width="58" Height="22" IsEnabled="False" Margin="6,0,0,0" />
-                                    <Button Style="{StaticResource RouterButton}" Content="Save" Width="64" Height="22" IsEnabled="False" Margin="6,0,0,0" />
-                                    <TextBlock Text="{Binding PasswordStatus}" Margin="10,0,0,0" VerticalAlignment="Center"
-                                               Foreground="{StaticResource RouterMuted}" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Password changes :" Style="{StaticResource RouterLabel}" />
-                                <TextBlock Grid.Column="1" TextWrapping="Wrap" Foreground="{StaticResource RouterMuted}" VerticalAlignment="Center"
-                                           Text="Unavailable. The modem service writes the passphrase to the Android log during every access-point restart." />
-                            </Grid>
-                        </Border>
-
-                        <StackPanel Orientation="Horizontal" Margin="178,12,0,0">
-                            <Button Style="{StaticResource RouterButton}" Content="Save" Command="{Binding SaveCommand}" />
-                        </StackPanel>
-                        <TextBlock Text="{Binding SavedSettingsNote}" Foreground="{StaticResource RouterMuted}"
-                                   TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="620" HorizontalAlignment="Left" />
-                    </StackPanel>
-
-                    <!-- MAC Filtering -->
-                    <StackPanel Visibility="{Binding SelectedPageKey, Converter={StaticResource StringEqualsToVis}, ConverterParameter=MacFiltering}">
-                        <TextBlock Text="MAC Address Filtering" Style="{StaticResource PageHeader}" />
-                        <Border Style="{StaticResource RouterRule}" />
-                        <Border Style="{StaticResource RouterRow}" Margin="0,6,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Status :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <RadioButton Content="Enable" IsEnabled="False" VerticalAlignment="Center" />
-                                    <RadioButton Content="Disable" IsEnabled="False" IsChecked="True" Margin="22,0,0,0" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Filtering Rule :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1">
-                                    <RadioButton Content="Deny the network access for the devices (MAC address) not listed below."
-                                                 IsEnabled="False" IsChecked="True" />
-                                    <RadioButton Content="Permit the network access for the devices (MAC address) not listed below."
-                                                 IsEnabled="False" Margin="0,3,0,0" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <StackPanel Orientation="Horizontal" Margin="178,10,0,0">
-                            <Button Style="{StaticResource RouterButton}" Content="Save" IsEnabled="False" />
-                        </StackPanel>
-
-                        <TextBlock Text="MAC Filtering Rule Settings" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Description :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="240" HorizontalAlignment="Left" IsEnabled="False" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Rule :" Style="{StaticResource RouterLabel}" />
-                                <ComboBox Grid.Column="1" Style="{StaticResource RouterCombo}" IsEnabled="False" SelectedIndex="0">
-                                    <ComboBoxItem Content="Permit" />
-                                    <ComboBoxItem Content="Deny" />
-                                </ComboBox>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Source MAC Address :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="240" HorizontalAlignment="Left" IsEnabled="False" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Day :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <CheckBox Content="Sun" IsEnabled="False" VerticalAlignment="Center" />
-                                    <CheckBox Content="Mon" IsEnabled="False" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                    <CheckBox Content="Tue" IsEnabled="False" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                    <CheckBox Content="Wed" IsEnabled="False" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                    <CheckBox Content="Thu" IsEnabled="False" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                    <CheckBox Content="Fri" IsEnabled="False" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                    <CheckBox Content="Sat" IsEnabled="False" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                    <CheckBox Content="Everyday" IsEnabled="False" Margin="16,0,0,0" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Time :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <TextBox Width="70" Style="{StaticResource RouterTextBox}" IsEnabled="False" />
-                                    <TextBlock Text="–" Margin="6,0" VerticalAlignment="Center" />
-                                    <TextBox Width="70" Style="{StaticResource RouterTextBox}" IsEnabled="False" />
-                                    <CheckBox Content="All Day" IsEnabled="False" Margin="14,0,0,0" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <StackPanel Orientation="Horizontal" Margin="178,10,0,0">
-                            <Button Style="{StaticResource RouterButton}" Content="Add" IsEnabled="False" />
-                        </StackPanel>
-
-                        <TextBlock Text="MAC Filtering List" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
-                        <Border Style="{StaticResource TableHeader}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="46" /><ColumnDefinition Width="*" /><ColumnDefinition Width="90" />
-                                    <ColumnDefinition Width="150" /><ColumnDefinition Width="80" /><ColumnDefinition Width="80" /><ColumnDefinition Width="70" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="ID" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="1" Text="Description" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="2" Text="Rule" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="3" Text="MAC Address" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="4" Text="Day" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="5" Text="Time" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="6" Text="Modify" Style="{StaticResource TableHeadText}" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource TableRow}" BorderThickness="1,0,1,1">
-                            <TextBlock Text="No filtering rules. This firmware does not expose a verified filtering control."
-                                       Foreground="{StaticResource RouterMuted}" />
-                        </Border>
-                        <TextBlock Text="{Binding UnavailableNote}" Foreground="{StaticResource RouterMuted}"
-                                   TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="620" HorizontalAlignment="Left" />
-                    </StackPanel>
-
-                    <!-- Wireless Advanced -->
-                    <StackPanel Visibility="{Binding SelectedPageKey, Converter={StaticResource StringEqualsToVis}, ConverterParameter=WirelessAdvanced}">
-                        <TextBlock Text="Wireless Advanced" Style="{StaticResource PageHeader}" />
-                        <Border Style="{StaticResource RouterRule}" />
-                        <Border Style="{StaticResource RouterRow}" Margin="0,6,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Channel :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <ComboBox Style="{StaticResource RouterCombo}" IsEnabled="False" Width="90"
-                                              ItemsSource="{Binding ChannelChoices}" SelectedItem="{Binding ChannelNumber, Mode=OneWay}" />
-                                    <TextBlock Text="Read only. The modem's channel control does not apply changes."
-                                               Foreground="{StaticResource RouterMuted}" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Maximum Devices :" Style="{StaticResource RouterLabel}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <ComboBox Style="{StaticResource RouterCombo}" Width="90" IsEnabled="{Binding CanEdit}"
-                                              ItemsSource="{Binding MaximumChoices}" SelectedItem="{Binding MaximumClients, Mode=TwoWay}"
-                                              AutomationProperties.Name="Maximum devices" />
-                                    <TextBlock Text="1 – 10" Foreground="{StaticResource RouterMuted}" Margin="10,0,0,0" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="SSID Broadcast :" Style="{StaticResource RouterLabel}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Broadcast}" Style="{StaticResource TableText}" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Password :" Style="{StaticResource RouterLabel}" />
-                                <TextBlock Grid.Column="1" Text="{Binding PasswordStatus}" Style="{StaticResource TableText}" />
-                            </Grid>
-                        </Border>
-                        <StackPanel Orientation="Horizontal" Margin="178,12,0,0">
-                            <Button Style="{StaticResource RouterButton}" Content="Save" Command="{Binding SaveCommand}" />
-                        </StackPanel>
-                        <TextBlock Text="{Binding SavedSettingsNote}" Foreground="{StaticResource RouterMuted}"
-                                   TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="620" HorizontalAlignment="Left" />
+                        <TextBlock Text="{Binding LastUpdated}" Foreground="{StaticResource RouterMuted}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
                     </StackPanel>
 
                     <!-- Wireless Client List -->
@@ -701,6 +384,7 @@
                         <TextBlock Text="Only devices associated with the modem's Wi-Fi are listed. A device may not yet hold an IP address. Select Refresh to update."
                                    Foreground="{StaticResource RouterMuted}" TextWrapping="Wrap" Margin="0,10,0,0"
                                    MaxWidth="640" HorizontalAlignment="Left" />
+                        <TextBlock Text="{Binding LastUpdated}" Foreground="{StaticResource RouterMuted}" Margin="0,4,0,0" />
                     </StackPanel>
 
                     <!-- LAN / DHCP -->
@@ -711,8 +395,7 @@
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <TextBlock Text="IP Address :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="170" HorizontalAlignment="Left"
-                                         IsReadOnly="True" IsEnabled="False" Text="{Binding LanAddress, Mode=OneWay}" />
+                                <TextBlock Grid.Column="1" Text="{Binding LanAddress}" Style="{StaticResource TableText}" />
                             </Grid>
                         </Border>
                         <TextBlock Text="DHCP Server" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
@@ -727,16 +410,14 @@
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <TextBlock Text="Start IP Address :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="170" HorizontalAlignment="Left"
-                                         IsReadOnly="True" IsEnabled="False" Text="{Binding DhcpStart, Mode=OneWay}" />
+                                <TextBlock Grid.Column="1" Text="{Binding DhcpStart}" Style="{StaticResource TableText}" />
                             </Grid>
                         </Border>
                         <Border Style="{StaticResource RouterRow}">
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <TextBlock Text="End IP Address :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="170" HorizontalAlignment="Left"
-                                         IsReadOnly="True" IsEnabled="False" Text="{Binding DhcpEnd, Mode=OneWay}" />
+                                <TextBlock Grid.Column="1" Text="{Binding DhcpEnd}" Style="{StaticResource TableText}" />
                             </Grid>
                         </Border>
                         <Border Style="{StaticResource RouterRow}">
@@ -746,8 +427,6 @@
                                 <TextBlock Grid.Column="1" Text="{Binding DhcpLease}" Style="{StaticResource TableText}" />
                             </Grid>
                         </Border>
-                        <TextBlock Text="{Binding ReadOnlyNote}" Foreground="{StaticResource RouterMuted}"
-                                   TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="620" HorizontalAlignment="Left" />
 
                         <TextBlock Text="DHCP Client List" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
                         <Border Style="{StaticResource TableHeader}">
@@ -789,55 +468,8 @@
                         <TextBlock Text="The running address server also serves USB tethering, so these entries are not all Wi-Fi devices."
                                    Foreground="{StaticResource RouterMuted}" TextWrapping="Wrap" Margin="0,10,0,0"
                                    MaxWidth="640" HorizontalAlignment="Left" />
-                    </StackPanel>
-
-                    <!-- Address Reservation -->
-                    <StackPanel Visibility="{Binding SelectedPageKey, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Reservation}">
-                        <TextBlock Text="Address Reservation" Style="{StaticResource PageHeader}" />
-                        <Border Style="{StaticResource RouterRule}" />
-                        <Border Style="{StaticResource RouterRow}" Margin="0,6,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="Description :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="240" HorizontalAlignment="Left" IsEnabled="False" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="IP Address :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="170" HorizontalAlignment="Left" IsEnabled="False" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource RouterRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="MAC Address :" Style="{StaticResource RouterLabel}" />
-                                <TextBox Grid.Column="1" Style="{StaticResource RouterTextBox}" Width="200" HorizontalAlignment="Left" IsEnabled="False" />
-                            </Grid>
-                        </Border>
-                        <StackPanel Orientation="Horizontal" Margin="178,10,0,0">
-                            <Button Style="{StaticResource RouterButton}" Content="Add" IsEnabled="False" />
-                        </StackPanel>
-
-                        <TextBlock Text="Address Reservation List" Style="{StaticResource RouterSection}" Margin="0,14,0,2" />
-                        <Border Style="{StaticResource TableHeader}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="46" /><ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="160" /><ColumnDefinition Width="170" /><ColumnDefinition Width="80" /></Grid.ColumnDefinitions>
-                                <TextBlock Text="ID" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="1" Text="Description" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="2" Text="IP Address" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="3" Text="MAC Address" Style="{StaticResource TableHeadText}" />
-                                <TextBlock Grid.Column="4" Text="Modify" Style="{StaticResource TableHeadText}" />
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource TableRow}" BorderThickness="1,0,1,1">
-                            <TextBlock Text="No reservations. This firmware exposes no verified reservation mechanism."
-                                       Foreground="{StaticResource RouterMuted}" />
-                        </Border>
-                        <TextBlock Text="{Binding UnavailableNote}" Foreground="{StaticResource RouterMuted}"
-                                   TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="620" HorizontalAlignment="Left" />
+                        <TextBlock Text="{Binding ReadOnlyNote}" Foreground="{StaticResource RouterMuted}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
                     </StackPanel>
 
                     <!-- Feature Availability -->
@@ -872,20 +504,15 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="Controls are enabled only after the modem confirms the change and the original settings can be restored."
-                                   Foreground="{StaticResource RouterMuted}" TextWrapping="Wrap" Margin="0,10,0,0"
-                                   MaxWidth="640" HorizontalAlignment="Left" />
+                        <TextBlock Text="{Binding ReadOnlyNote}" Foreground="{StaticResource RouterMuted}"
+                                   TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="640" HorizontalAlignment="Left" />
                     </StackPanel>
                 </Grid>
             </ScrollViewer>
         </Grid>
 
-        <Border Grid.Row="2" Background="#EAF1F8" BorderBrush="{StaticResource RouterLine}" BorderThickness="0,1,0,0" Padding="12,4">
-            <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Feedback}" TextWrapping="Wrap" Foreground="{StaticResource RouterInk}" />
-                <TextBlock Grid.Column="1" Text="{Binding LastUpdated}" Foreground="{StaticResource RouterMuted}" />
-            </Grid>
+        <Border Grid.Row="2" Background="#EAF1F8" BorderBrush="#C6D4E3" BorderThickness="0,1,0,0" Padding="12,5">
+            <TextBlock Text="{Binding Feedback}" Foreground="{StaticResource RouterMuted}" />
         </Border>
     </Grid>
 </UserControl>

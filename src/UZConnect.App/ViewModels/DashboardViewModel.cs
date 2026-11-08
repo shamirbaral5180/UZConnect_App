@@ -110,8 +110,7 @@ public sealed class DashboardViewModel : ObservableObject, IPageViewModel
 
     public string SyncButtonText => IsSyncing ? "Syncing…" : "Sync inbox";
 
-    public bool IsDataConnected => _session.MifiStatus?.IsConnected == true ||
-                                   _session.ConnectionStatus.DataConnected;
+    public bool IsDataConnected => _session.ConnectionStatus.DataConnected;
     public bool IsDataDisconnected => IsConnected && !IsDataConnected;
     public string ConnectionLabel => IsConnected ? (IsDataConnected ? "Connected" : "Disconnected") : "No device";
     public string ConnectButtonText => IsDataConnected ? "Disconnect" : "Connect";

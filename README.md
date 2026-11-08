@@ -39,19 +39,19 @@ had: a classic D‑Link‑style window with real SMS, USSD, APN and Wi‑Fi tool
 no firmware flashing, no vendor cloud.
 
 > **Design rule:** the app never claims a change it has not read back from the modem.
-> Wi‑Fi settings are backed up, applied, verified in both the active and saved configuration,
-> and rolled back automatically if verification fails.
+> Connect and disconnect are confirmed against the real data interface, not a cached status.
+> The Wi‑Fi page is strictly read‑only: it never writes settings to the modem.
 
 ---
 
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="docs/images/wifi-status.png" width="720" alt="Wi-Fi status with the large power toggle" />
+  <img src="docs/images/wifi-status.png" width="720" alt="Read-only Wi-Fi status with SSID, password and connected devices" />
 </p>
 
 <p align="center">
-  <img src="docs/images/wifi-settings.png" width="720" alt="Wireless settings, AP security and visibility" />
+  <img src="docs/images/wifi-settings.png" width="720" alt="Read-only wireless information and AP security" />
 </p>
 
 ---
@@ -62,8 +62,8 @@ no firmware flashing, no vendor cloud.
 
 | | |
 |---|---|
-| **Single-file (recommended)** | `UZConnect-0.3.0-win-x64.exe` — download and run, nothing to unzip |
-| Portable build | `UZConnect-0.3.0-win-x64.zip` (~62 MB) |
+| **Single-file (recommended)** | `UZConnect-0.4.0-win-x64.exe` — download and run, nothing to unzip |
+| Portable build | `UZConnect-0.4.0-win-x64.zip` (~62 MB) |
 | Requirements | Windows 10/11 x64 · UZ801 modem over USB · ADB authorized |
 | Runtime | None — .NET 10 is bundled |
 
@@ -101,39 +101,26 @@ no firmware flashing, no vendor cloud.
 | Mobile data, APN profiles (NTC / Ncell) | ✅ Verified |
 | SMS read, send, delete, recycle | ✅ Verified |
 | USSD balance and interactive menus | ✅ Verified |
-| Wi‑Fi status, client list, DHCP ranges | ✅ Verified |
-| Wi‑Fi name and maximum devices | ✅ Verified with backup, verification and rollback |
-| Wi‑Fi ON/OFF | ✅ Verified with access‑point state checks |
+| Mobile data, connect / disconnect | ✅ Verified against the real data interface |
+| SMS read, send, delete, recycle | ✅ Verified |
+| USSD balance and interactive menus | ✅ Verified |
 | Internet sharing to Wi‑Fi/RNDIS clients | ✅ IPv4 forwarding + NAT repaired automatically |
-| Wi‑Fi password, hidden SSID | ⛔ Disabled — blocked by stock firmware |
-| Channel, security mode, DHCP/DNS editing | 👁 Read‑only |
+| Wi‑Fi status, SSID, current password, client list, DHCP ranges | 👁 Read‑only (nothing written) |
+| Wi‑Fi power, password changes, hidden SSID, LAN/DHCP editing | ⛔ Not offered |
 
 ---
 
-## 📶 Wi‑Fi Management
+## 📶 Wi‑Fi Information
 
-The Wi‑Fi section is a self‑contained router‑style page: blue header, grouped navigation,
-underlined section titles and light tables. It shows the real access‑point state, the network
-name, connected devices with IP and MAC, and the active DHCP ranges.
+The Wi‑Fi section is a read‑only router‑style page: blue header, grouped navigation,
+underlined section titles and light tables. It shows the live access‑point state, the network
+name, the current password, connected devices with IP and MAC, and the active DHCP ranges.
 
-**Saving the network name or device limit** runs a transaction:
+**Nothing on this page changes the modem.** There is no power switch, no SSID or password
+editing, and no save button. **Refresh** only re‑reads the current state.
 
-1. Read and verify the current state.
-2. Back up `mificonfig.json`, `hostapd.conf` and `softap.conf` with hashes.
-3. Apply and restart the access point.
-4. Require three agreeing observations across a watchdog interval — active config, saved
-   config, vendor status, `hostapd` and `rndis0`.
-5. On failure, restore the backup and verify it again.
-
-**Wi‑Fi ON/OFF works.** Turning it off cancels the vendor's 20‑second refresh alarm and disables
-the access point; turning it on re‑arms the alarm and restarts the AP. The app verifies the
-access‑point state, the running `hostapd` process and a valid channel before reporting success,
-and restores the AP if it does not stay off.
-
-**Password changes and hidden SSID remain disabled.** On stock V2.3.11 the vendor service
-re‑asserts those settings from memory on every bind, and the networking service writes the WPA
-passphrase to the Android log during every access‑point start. No safe, durable control exists
-without modifying system components.
+The current password is read from the running access‑point configuration and displayed on this
+PC only. It is never written to logs, reports or the network.
 
 **Client internet.** The stock bridge leaves IPv4 forwarding off and NAT empty, so connected
 Wi‑Fi/RNDIS clients cannot reach the internet even when the modem shows Connected. UZConnect
@@ -214,7 +201,7 @@ dotnet publish src\UZConnect.App\UZConnect.App.csproj -c Release -r win-x64 --se
 | [Hardware report](docs/HARDWARE-REPORT.md) | USB identity, ADB, SMS, USSD and stock control‑channel evidence |
 | [Wi‑Fi management](docs/WIFI-MANAGEMENT.md) | Verified mechanisms, qualification results, blockers and required changes |
 | [UI reference](docs/UI-REFERENCE.md) | Layout and asset notes from the D‑Link Connection Manager |
-| [Release notes](docs/RELEASE-NOTES-0.3.0.md) | What ships in 0.3.0 and what is deliberately disabled |
+| [Release notes](docs/RELEASE-NOTES-0.4.0.md) | What ships in 0.4.0 and what is deliberately disabled |
 
 ---
 

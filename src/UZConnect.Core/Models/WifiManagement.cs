@@ -4,12 +4,12 @@ using System.Text.Json;
 
 namespace UZConnect.Core.Models;
 
-// Deliberately contains no password, PSK, full configuration, or device serial.
+// Contains the current passphrase only for read-only display on the local page.
 public sealed record WifiClientInfo(string Name, string IpAddress, string MacAddress);
 public sealed record WifiDhcpRange(string Start, string End, string Lease);
 public sealed record WifiSnapshot(
     int? ApState, bool HostapdRunning, string? Ssid, int? Channel, int? MaximumClients,
-    bool? HiddenSsid, bool? PasswordConfigured, string Security,
+    bool? HiddenSsid, bool? PasswordConfigured, string Security, string? Password,
     string? Gateway, IReadOnlyList<WifiDhcpRange> DhcpRanges,
     IReadOnlyList<WifiClientInfo> Clients, bool ClientsAvailable,
     bool ConfigurationAvailable, bool RndisBridged, DateTimeOffset ObservedAt)
@@ -57,8 +57,9 @@ public sealed record WifiSnapshot(
             }
         return new(Number("apState"), Flag("hostapd") == true, Text("ssid"), Number("channel"),
             Number("maximumClients"), Flag("hidden"), Flag("passwordConfigured"), Text("security") ?? "Not available",
-            Text("gateway"), ranges, clients.DistinctBy(c => c.MacAddress).ToArray(), Flag("clientsAvailable") == true,
-            Flag("configurationAvailable") == true, Flag("rndisBridged") == true, DateTimeOffset.UtcNow);
+            Text("password"), Text("gateway"), ranges, clients.DistinctBy(c => c.MacAddress).ToArray(),
+            Flag("clientsAvailable") == true, Flag("configurationAvailable") == true,
+            Flag("rndisBridged") == true, DateTimeOffset.UtcNow);
     }
 
     private static string Clean(string? value, int limit) => string.IsNullOrWhiteSpace(value) ? "Not available"
@@ -79,19 +80,19 @@ public sealed record WifiFeature(string Name, string Status, string Reason);
 
 public static class WifiCapabilities
 {
-    // Release gate for the verified transaction. Enabled only after the modem qualification run:
-    // apply, active/saved agreement, restart, reboot persistence and hardware rollback all passed.
-    public static bool BasicChangesVerified => true;
+    // The Wi-Fi page is intentionally read-only. It reads the live access-point state,
+    // the network name, the current password and the connected devices, and never writes.
+    public static bool BasicChangesVerified => false;
     public static IReadOnlyList<WifiFeature> Features { get; } = new WifiFeature[]
     {
-        new("Network name / maximum devices", "Available", "Changes are backed up, applied, confirmed in active and saved state, and restored if verification fails."),
-        new("Wi-Fi on / off", "Available", "Turns the access point off or on, then verifies the access-point state and the running service before reporting success."),
-        new("Password changes", "Unavailable", "The stock networking service writes the passphrase to the Android log during every access-point restart."),
-        new("Security mode", "Read only", "Only the current security configuration has been verified."),
-        new("Channel selection", "Read only", "The modem's channel-changing control does not apply changes."),
-        new("Hide network name", "Read only", "The modem service overwrites the hidden flag from its in-memory configuration on every restart."),
+        new("Connected devices", "Read only", "Lists devices currently associated with the modem's Wi-Fi with their IP and MAC address."),
+        new("Network name (SSID)", "Read only", "Shown from the running access-point configuration. Nothing is written to the modem."),
+        new("Current password", "Read only", "Shown locally from the running access-point configuration. It is never logged or sent anywhere."),
+        new("Wi-Fi on / off", "Read only", "Managed by the modem firmware. UZConnect does not change the access-point state."),
+        new("Security mode / channel / broadcast", "Read only", "Only the current configuration is displayed."),
+        new("LAN / DHCP", "Read only", "Gateway, address range and lease time are displayed from the running services."),
         new("Allow / block devices", "Unavailable", "Device filtering enforcement has not been verified."),
         new("Reserved addresses", "Unavailable", "No verified persistent reservation mechanism is available."),
-        new("DHCP / gateway / DNS", "Read only", "Working configuration controls are not available; changes may interrupt USB and Wi-Fi."),
+        new("DHCP / gateway / DNS changes", "Unavailable", "Working configuration controls are not available; changes may interrupt USB and Wi-Fi."),
     };
 }

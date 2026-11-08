@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using System.Windows.Input;
 using UZConnect.Core.Models;
 using UZConnect.Windows.Services;
@@ -12,6 +11,10 @@ public sealed record WifiClientRow(int Id, string Name, string IpAddress, string
 public sealed record WifiRangeRow(int Id, string Start, string End, string Lease);
 public sealed record WifiFeatureRow(int Id, string Name, string Status, string Reason);
 
+/// <summary>
+/// Read-only Wi-Fi view: status, network name, current password, connected devices and
+/// LAN/DHCP. Nothing on this page writes to the modem; Refresh only re-reads state.
+/// </summary>
 public sealed class WifiManagementViewModel : ObservableObject
 {
     private readonly ModemSession _session;
@@ -26,18 +29,11 @@ public sealed class WifiManagementViewModel : ObservableObject
     {
         _session = session;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !Busy);
-        SaveCommand = new AsyncRelayCommand(SaveAsync, () => CanSave);
         NavItems = new ObservableCollection<WifiNavItem>
         {
             new("Status", "Status"),
-            new("Wireless2G", "Wireless 2.4G", true),
-            new("WirelessSettings", "Wireless Settings"),
-            new("MacFiltering", "MAC Filtering"),
-            new("WirelessAdvanced", "Wireless Advanced"),
             new("ClientList", "Wireless Client List"),
-            new("Network", "Network", true),
             new("Lan", "LAN / DHCP"),
-            new("Reservation", "Address Reservation"),
             new("Availability", "Feature Availability")
         };
         SelectedNav = NavItems[0];
@@ -48,7 +44,6 @@ public sealed class WifiManagementViewModel : ObservableObject
     }
 
     public ICommand RefreshCommand { get; }
-    public ICommand SaveCommand { get; }
     public ObservableCollection<WifiNavItem> NavItems { get; }
     public IReadOnlyList<WifiFeature> Features => WifiCapabilities.Features;
     public ObservableCollection<WifiClientInfo> Clients { get; } = new();
@@ -58,8 +53,6 @@ public sealed class WifiManagementViewModel : ObservableObject
     public ObservableCollection<WifiFeatureRow> FeatureRows { get; } = new();
     public bool HasClientRows => ClientRows.Count > 0;
     public bool HasRangeRows => RangeRows.Count > 0;
-    public IEnumerable<int> MaximumChoices => Enumerable.Range(1, 10);
-    public IEnumerable<int> ChannelChoices => Enumerable.Range(1, 13);
 
     public WifiNavItem? SelectedNav
     {
@@ -69,6 +62,7 @@ public sealed class WifiManagementViewModel : ObservableObject
             if (value is { IsGroup: false } && SetProperty(ref _selectedNav, value))
             {
                 Raise(nameof(SelectedPageKey));
+                Raise(nameof(PageTitle));
             }
         }
     }
@@ -79,39 +73,23 @@ public sealed class WifiManagementViewModel : ObservableObject
     public string Ssid
     {
         get => _ssid;
-        set { if (SetProperty(ref _ssid, value)) { Raise(nameof(CanSave)); CommandManager.InvalidateRequerySuggested(); } }
+        private set => SetProperty(ref _ssid, value);
     }
 
     public int MaximumClients
     {
         get => _maximum;
-        set { if (SetProperty(ref _maximum, value)) { Raise(nameof(CanSave)); CommandManager.InvalidateRequerySuggested(); } }
+        private set => SetProperty(ref _maximum, value);
     }
 
     public bool Busy
     {
         get => _busy;
-        private set { if (SetProperty(ref _busy, value)) { Raise(nameof(CanEdit), nameof(CanSave)); CommandManager.InvalidateRequerySuggested(); } }
+        private set { if (SetProperty(ref _busy, value)) CommandManager.InvalidateRequerySuggested(); }
     }
 
     public string Feedback { get => _feedback; private set => SetProperty(ref _feedback, value); }
-    public bool CanEdit => WifiCapabilities.BasicChangesVerified && !Busy && _snapshot is { ConfigurationAvailable: true } && _session.IsConnected;
-    public bool WifiPowerEnabled => !Busy && _session.IsConnected && _snapshot is not null;
-    public bool WifiPowerOn
-    {
-        get => WifiEnabled;
-        set
-        {
-            if (value == WifiEnabled || Busy || !_session.IsConnected)
-            {
-                return;
-            }
 
-            _ = SetWifiPowerAsync(value);
-        }
-    }
-    public bool CanSave => CanEdit && new WifiBasicSettings(Ssid, MaximumClients).ValidationError is null &&
-        (Ssid != _snapshot?.Ssid || MaximumClients != _snapshot?.MaximumClients);
     public bool WifiEnabled => _snapshot is { ApState: 13, HostapdRunning: true };
     public bool WifiDisabled => !WifiEnabled;
     public bool BroadcastEnabled => _snapshot?.HiddenSsid == false;
@@ -122,7 +100,13 @@ public sealed class WifiManagementViewModel : ObservableObject
     public string Security => _snapshot?.Security ?? "Not available";
     public string AuthenticationType => Security == "Open" ? "Open" : Security.StartsWith("WPA", StringComparison.Ordinal) ? "WPA/WPA2-PSK" : "Not available";
     public string EncryptionType => Security == "WPA2 / AES" ? "AES" : Security == "Open" ? "None" : "Not available";
-    public string PasswordStatus => _snapshot?.PasswordConfigured switch { true => "Configured", false => "Not configured", _ => "Not available" };
+    public string Password => _snapshot?.Password is { Length: > 0 } password ? password : "Not available";
+    public string PasswordStatus => _snapshot?.PasswordConfigured switch
+    {
+        true => "Configured",
+        false => "Not configured",
+        _ => "Not available"
+    };
     public string Channel => ChannelNumber?.ToString() ?? "Not available";
     public string Broadcast => _snapshot?.HiddenSsid switch { true => "Hidden", false => "Visible", _ => "Not available" };
     public string Gateway => _snapshot?.Gateway ?? "Not available";
@@ -137,18 +121,14 @@ public sealed class WifiManagementViewModel : ObservableObject
     public string ClientSummary => _snapshot?.ClientsAvailable == true
         ? (Clients.Count == 0 ? "No connected Wi-Fi devices reported." : $"{Clients.Count} connected Wi-Fi device(s).")
         : "Connected-device information is unavailable.";
-    public string SavedSettingsNote => WifiCapabilities.BasicChangesVerified
-        ? "Saving briefly disconnects Wi-Fi devices. The current settings are backed up, and the original is restored if the modem does not confirm the change."
-        : "Settings are shown read-only until modem verification and recovery checks are complete.";
-    public string ReadOnlyNote => WifiCapabilities.BasicChangesVerified
-        ? "Read-only settings have no verified control on this firmware. Nothing is written to the modem."
-        : "This page is read-only. Change controls stay disabled until the modem checks pass.";
+    public string ReadOnlyNote => "This page is read-only. Everything shown is read from the modem; nothing is written or changed.";
     public string UnavailableNote => "The stock firmware exposes no verified control for this setting. Nothing is written to the modem.";
 
     public async Task RefreshAsync()
     {
         if (Busy) return;
         Busy = true;
+        Feedback = "Reading Wi-Fi information…";
         try
         {
             var device = _session.ActiveDevice?.AdbSerial;
@@ -184,47 +164,6 @@ public sealed class WifiManagementViewModel : ObservableObject
         if (!_session.IsConnected) { Clear(); Feedback = "Connect the modem to view Wi-Fi settings."; Notify(); }
     }
 
-    private async Task SaveAsync()
-    {
-        if (!CanSave) return;
-        if (MessageBox.Show("Save these Wi-Fi settings? Connected Wi-Fi devices will briefly disconnect.", "Wi-Fi Management",
-            MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-        Busy = true;
-        string message;
-        try { message = (await _session.ApplyWifiBasicAsync(new(Ssid, MaximumClients))).Message; }
-        catch { message = "The change could not be confirmed. Refresh the modem status before retrying."; }
-        finally { Busy = false; }
-        await RefreshAsync();
-        Feedback = message;
-    }
-
-    private async Task SetWifiPowerAsync(bool on)
-    {
-        Busy = true;
-        Feedback = on ? "Turning Wi-Fi on…" : "Turning Wi-Fi off…";
-        try
-        {
-            var ok = await _session.SetWifiPowerAsync(on);
-            Feedback = ok
-                ? on ? "Wi-Fi is on and broadcasting." : "Wi-Fi is off. Clients are disconnected."
-                : on
-                    ? "The access point did not return. Reboot the modem, then try again."
-                    : "The access point did not stay off; it was restored.";
-        }
-        catch
-        {
-            Feedback = "Wi-Fi power change failed. Check the modem connection.";
-        }
-        finally
-        {
-            Busy = false;
-        }
-
-        await RefreshAsync();
-        Raise(nameof(WifiPowerOn), nameof(WifiPowerEnabled));
-        CommandManager.InvalidateRequerySuggested();
-    }
-
     private void Clear()
     {
         _snapshot = null;
@@ -238,11 +177,11 @@ public sealed class WifiManagementViewModel : ObservableObject
     private void Notify()
     {
         Raise(nameof(Status), nameof(Security), nameof(AuthenticationType), nameof(EncryptionType),
-            nameof(PasswordStatus), nameof(Channel), nameof(ChannelNumber), nameof(Broadcast), nameof(BroadcastEnabled),
-            nameof(Gateway), nameof(LanAddress), nameof(DefaultGateway), nameof(DhcpStatus), nameof(DhcpStart),
-            nameof(DhcpEnd), nameof(DhcpLease), nameof(ConnectedCount), nameof(WifiEnabled), nameof(LastUpdated),
-            nameof(ClientSummary), nameof(CanEdit), nameof(CanSave), nameof(PageTitle),
-            nameof(HasClientRows), nameof(HasRangeRows), nameof(WifiDisabled), nameof(BroadcastDisabled), nameof(IsAes),
-            nameof(WifiPowerOn), nameof(WifiPowerEnabled));
+            nameof(Password), nameof(PasswordStatus), nameof(Channel), nameof(ChannelNumber),
+            nameof(Broadcast), nameof(BroadcastEnabled), nameof(Gateway), nameof(LanAddress),
+            nameof(DefaultGateway), nameof(DhcpStatus), nameof(DhcpStart), nameof(DhcpEnd),
+            nameof(DhcpLease), nameof(ConnectedCount), nameof(WifiEnabled), nameof(WifiDisabled),
+            nameof(LastUpdated), nameof(ClientSummary), nameof(PageTitle),
+            nameof(HasClientRows), nameof(HasRangeRows), nameof(BroadcastDisabled), nameof(IsAes));
     }
 }

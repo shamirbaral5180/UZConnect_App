@@ -58,6 +58,9 @@ public sealed class ModemSession : IDisposable
     private long _fastRx;
     private long _fastTx;
     private DateTimeOffset _fastAt;
+    private DateTimeOffset _dataTransitionUntil = DateTimeOffset.MinValue;
+    private DateTimeOffset _forceDisconnectedUntil = DateTimeOffset.MinValue;
+    private bool _suppressDataDetection;
 
     public string? CurrentOperator => MifiStatus?.Operator ?? NetworkInfo.Operator;
     private long _lastTxBytes;
@@ -393,12 +396,15 @@ public sealed class ModemSession : IDisposable
         if (status is not null)
         {
             var now = DateTimeOffset.Now;
-            // The stock status endpoint can lag behind the connection endpoint
-            // after an APN change. A real data IP means the connection is up.
-            var hasDataIp = !string.IsNullOrWhiteSpace(connection?.Ip) &&
-                            !string.Equals(connection!.Ip, "0.0.0.0", StringComparison.Ordinal) &&
-                            !string.Equals(connection.Ip, "192.168.100.1", StringComparison.Ordinal);
-            var connectedNow = status.IsConnected || hasDataIp || data.ip is not null;
+            // The rmnet interface is the only reliable indicator: the vendor status
+            // and connection endpoints can both stay "connected" after a disconnect.
+            var connectedNow = data.ip is not null && status.IsConnected;
+            if (DateTimeOffset.UtcNow < _forceDisconnectedUntil)
+            {
+                // A user-requested disconnect wins until the hold expires, even if the
+                // vendor or Android keeps the interface address for a few more seconds.
+                connectedNow = false;
+            }
             if (connectedNow)
             {
                 _connectedSince ??= now;
@@ -431,7 +437,7 @@ public sealed class ModemSession : IDisposable
             {
                 DataConnected = connectedNow,
                 State = connectedNow ? "Connected" : status.NetStatus,
-                IpAddress = connectedNow ? (connection?.Ip ?? data.ip ?? ConnectionStatus.IpAddress) : null,
+                IpAddress = connectedNow ? data.ip : null,
                 DurationSeconds = duration,
                 RxBytes = rx ?? ConnectionStatus.RxBytes,
                 TxBytes = tx ?? ConnectionStatus.TxBytes
@@ -442,7 +448,7 @@ public sealed class ModemSession : IDisposable
                 ConnectionStatus = ConnectionStatus with { MobileDataEnabled = true };
             }
         }
-        else if (data.ip is not null)
+        else if (data.ip is not null && DateTimeOffset.UtcNow >= _forceDisconnectedUntil)
         {
             // The vendor page can be unavailable while the modem still has a live data session.
             var now = DateTimeOffset.Now;
@@ -486,32 +492,6 @@ public sealed class ModemSession : IDisposable
     public Task<WifiSnapshot> ReadWifiManagementAsync(CancellationToken cancellationToken = default)
         => _wifiManagement.ReadAsync(ActiveDevice?.AdbSerial
             ?? throw new InvalidOperationException("Connect the modem to view Wi-Fi settings."), cancellationToken);
-
-    public async Task<WifiChangeResult> ApplyWifiBasicAsync(WifiBasicSettings settings, CancellationToken cancellationToken = default)
-    {
-        var serial = ActiveDevice?.AdbSerial
-            ?? throw new InvalidOperationException("Connect the modem before changing Wi-Fi.");
-        await _actionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try { return await _wifiManagement.ApplyBasicAsync(serial, settings, cancellationToken).ConfigureAwait(false); }
-        finally { _actionGate.Release(); }
-    }
-
-    public async Task<bool> SetWifiPowerAsync(bool on, CancellationToken cancellationToken = default)
-    {
-        var serial = ActiveDevice?.AdbSerial
-            ?? throw new InvalidOperationException("Connect the modem before changing Wi-Fi.");
-        await _actionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            var ok = await _wifiManagement.SetPowerAsync(serial, on, cancellationToken).ConfigureAwait(false);
-            if (ok)
-            {
-                await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
-            }
-            return ok;
-        }
-        finally { _actionGate.Release(); }
-    }
 
     private async Task<bool> IsHostapdRunningAsync(string serial, CancellationToken cancellationToken)
     {
@@ -856,78 +836,206 @@ public sealed class ModemSession : IDisposable
             throw new InvalidOperationException("Connect the modem before changing mobile data.");
         }
 
-        if (enabled)
+        _dataTransitionUntil = DateTimeOffset.UtcNow.AddSeconds(40);
+        _suppressDataDetection = !enabled;
+        _forceDisconnectedUntil = enabled ? DateTimeOffset.MinValue : DateTimeOffset.UtcNow.AddSeconds(60);
+        try
         {
-            await EnsureDefaultApnProfilesAsync(cancellationToken).ConfigureAwait(false);
-            if (MifiStatus?.IsConnected == true || ConnectionStatus.DataConnected)
+            if (enabled)
             {
-                await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
+                await EnsureDefaultApnProfilesAsync(cancellationToken).ConfigureAwait(false);
+                var data = await GetDataSessionAsync(ActiveDevice.AdbSerial!, cancellationToken).ConfigureAwait(false);
+                if (data.ip is not null)
+                {
+                    await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
+                    await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                var profiles = await _mifi.GetProfilesAsync(ActiveDevice.AdbSerial!, cancellationToken)
+                    .ConfigureAwait(false);
+                var match = profiles.FirstOrDefault(p =>
+                    OperatorDefaults.ApnMatches(p.Apn, CurrentOperator) ||
+                    OperatorDefaults.ProfileNameMatches(p.Name, CurrentOperator));
+                if (match is not null)
+                {
+                    var selected = await _mifi.ConnectProfileAsync(ActiveDevice.AdbSerial!, match.Number, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (selected)
+                    {
+                        _log.Info("Connection", $"Selected {match.Name} APN profile {match.Number}.");
+                        await Task.Delay(2500, cancellationToken).ConfigureAwait(false);
+                        data = await GetDataSessionAsync(ActiveDevice.AdbSerial!, cancellationToken).ConfigureAwait(false);
+                        if (data.ip is not null)
+                        {
+                            await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
+                            await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
+                            return;
+                        }
+                    }
+                }
+
+                // The vendor "connect" only programs the modem state. Android keeps its own
+                // mobile-data flag off after a disconnect, so the session is never created.
+                // Always enable the Android data layer as part of connect.
+                try
+                {
+                    await _adbProvider.SetMobileDataAsync(true, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _log.Warning("Connection", $"Android data enable failed: {ex.Message}");
+                }
+
+                var webSuccess = false;
+                try
+                {
+                    webSuccess = await _mifi.SetConnectionModeAsync(ActiveDevice.AdbSerial!, true, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _log.Warning("Connection", $"Stock connect command failed: {ex.Message}");
+                }
+
+                if (webSuccess)
+                {
+                    _log.Info("Connection", "Stock modem connection set to Connect.");
+                }
+
+                for (var attempt = 0; attempt < 30; attempt++)
+                {
+                    await Task.Delay(2000, cancellationToken).ConfigureAwait(false);
+                    data = await GetDataSessionAsync(ActiveDevice.AdbSerial!, cancellationToken).ConfigureAwait(false);
+                    if (data.ip is not null)
+                    {
+                        break;
+                    }
+                }
+
+                // The interface can get its address a moment before the vendor state flips
+                // to Connected. Refresh until both agree, then report.
+                for (var settle = 0; settle < 6 && data.ip is not null; settle++)
+                {
+                    await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
+                    if (ConnectionStatus.DataConnected)
+                    {
+                        break;
+                    }
+                    await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (ConnectionStatus.DataConnected)
+                {
+                    await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
+                }
+                else if (data.ip is not null)
+                {
+                    _log.Warning("Connection", "Data interface is up, but the modem state is not Connected.");
+                }
+                else
+                {
+                    _log.Warning("Connection", "The modem did not create a data session.");
+                }
+
+                await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            var profiles = await _mifi.GetProfilesAsync(ActiveDevice.AdbSerial!, cancellationToken)
-                .ConfigureAwait(false);
-            var match = profiles.FirstOrDefault(p =>
-                OperatorDefaults.ApnMatches(p.Apn, CurrentOperator) ||
-                OperatorDefaults.ProfileNameMatches(p.Name, CurrentOperator));
-            if (match is not null)
+            var disconnected = false;
+            try
             {
-                var selected = await _mifi.ConnectProfileAsync(ActiveDevice.AdbSerial!, match.Number, cancellationToken)
+                disconnected = await _mifi.SetConnectionModeAsync(ActiveDevice.AdbSerial!, false, cancellationToken)
                     .ConfigureAwait(false);
-                if (selected)
+            }
+            catch (Exception ex)
+            {
+                _log.Warning("Connection", $"Stock disconnect command failed: {ex.Message}");
+            }
+
+            // Enforce the disconnect at the Android layer as well, so the UI cannot flip back.
+            try
+            {
+                await _adbProvider.SetMobileDataAsync(false, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _log.Warning("Connection", $"Android data disable failed: {ex.Message}");
+            }
+
+            if (disconnected)
+            {
+                _log.Info("Connection", "Stock modem connection set to Disconnect.");
+            }
+
+            var gone = false;
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                await Task.Delay(1500, cancellationToken).ConfigureAwait(false);
+                var current = await GetDataSessionAsync(ActiveDevice.AdbSerial!, cancellationToken).ConfigureAwait(false);
+                if (current.ip is null)
                 {
-                    _log.Info("Connection", $"Selected {match.Name} APN profile {match.Number}.");
-                    await Task.Delay(2500, cancellationToken).ConfigureAwait(false);
-                    await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
-                    if (MifiStatus?.IsConnected == true || ConnectionStatus.DataConnected)
-                    {
-                        await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
-                        return;
-                    }
+                    gone = true;
+                    break;
                 }
             }
-        }
 
-        var webSuccess = false;
-        try
-        {
-            webSuccess = await _mifi.SetConnectionModeAsync(ActiveDevice.AdbSerial!, enabled, cancellationToken)
-                .ConfigureAwait(false);
+            _connectedSince = null;
+            _fastAt = default;
+            RxRateKbps = 0;
+            TxRateKbps = 0;
+            ConnectionStatus = ConnectionStatus with
+            {
+                DataConnected = false,
+                State = "Disconnected",
+                IpAddress = null
+            };
+            _log.Info("Connection", gone
+                ? "Mobile data session closed and verified."
+                : "Disconnect requested; the data interface is still present.");
+            RaiseState("disconnected");
+            await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        finally
         {
-            _log.Warning("Connection", $"Stock connect/disconnect command failed: {ex.Message}");
-        }
-
-        if (!webSuccess)
-        {
-            await _adbProvider.SetMobileDataAsync(enabled, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            _log.Info("Connection", $"Stock modem connection set to {(enabled ? "Connect" : "Disconnect")}.");
-        }
-
-        await Task.Delay(2500, cancellationToken).ConfigureAwait(false);
-        await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
-        if (enabled && (MifiStatus?.IsConnected == true || ConnectionStatus.DataConnected))
-        {
-            await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
+            _suppressDataDetection = false;
+            _dataTransitionUntil = DateTimeOffset.UtcNow.AddSeconds(5);
         }
     }
 
+    /// <summary>
+    /// Reads the cellular data interface only. The stock image can report the LAN bridge
+    /// (192.168.100.1) from "ip route show default", which is never a data address; the
+    /// modem's own gateway must not be treated as a live session.
+    /// </summary>
     private async Task<(string iface, string? ip)> GetDataSessionAsync(
         string serial, CancellationToken cancellationToken)
     {
         var route = await _adb.ShellTextAsync(serial, "ip route show default",
             TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-        var routeMatch = Regex.Match(route, @"\bdev\s+(?<if>\w+)");
-        var iface = routeMatch.Success ? routeMatch.Groups["if"].Value : "rmnet0";
+        var candidates = Regex.Matches(route, @"\bdev\s+(?<if>\w+)")
+            .Select(m => m.Groups["if"].Value)
+            .Where(name => name.StartsWith("rmnet", StringComparison.Ordinal))
+            .Distinct()
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            candidates.AddRange(new[] { "rmnet0", "rmnet1", "rmnet2", "rmnet3" });
+        }
 
-        var address = await _adb.ShellTextAsync(serial, $"ip -f inet addr show {iface}",
-            TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-        var addressMatch = Regex.Match(address, @"inet\s+(?<ip>\d+\.\d+\.\d+\.\d+)");
-        return (iface, addressMatch.Success ? addressMatch.Groups["ip"].Value : null);
+        foreach (var iface in candidates)
+        {
+            var address = await _adb.ShellTextAsync(serial, $"ip -f inet addr show {iface}",
+                TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            var addressMatch = Regex.Match(address, @"inet\s+(?<ip>\d+\.\d+\.\d+\.\d+)");
+            if (addressMatch.Success &&
+                !string.Equals(addressMatch.Groups["ip"].Value, "192.168.100.1", StringComparison.Ordinal))
+            {
+                return (iface, addressMatch.Groups["ip"].Value);
+            }
+        }
+
+        return ("rmnet0", null);
     }
 
     /// <summary>
@@ -953,10 +1061,14 @@ public sealed class ModemSession : IDisposable
         {
             var route = await _adb.ShellTextAsync(serial, "ip route show default",
                 TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-            var routeMatch = Regex.Match(route, @"\bdev\s+(?<if>\w+)");
+            var routeMatch = Regex.Match(route, @"\bdev\s+(?<if>rmnet\w+)");
             if (routeMatch.Success)
             {
                 _dataInterface = routeMatch.Groups["if"].Value;
+            }
+            else if (!_dataInterface.StartsWith("rmnet", StringComparison.Ordinal))
+            {
+                _dataInterface = "rmnet0";
             }
 
             var bridge = await _adb.ShellTextAsync(serial, "ip -f inet addr show br0",

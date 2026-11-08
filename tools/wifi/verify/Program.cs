@@ -2,8 +2,32 @@ using UZConnect.Core.Abstractions;
 using UZConnect.Core.Models;
 using UZConnect.Windows.Adb;
 using UZConnect.Windows.Mifi;
+using UZConnect.Windows.Services;
 
 // Explicit opt-in qualification harness. Prints no SSIDs, MACs, serials, credentials or raw exceptions.
+if (args.Length == 1 && args[0] == "--data-test")
+{
+    var probeAdb = new AdbClient(new QuietLog());
+    using var session = new ModemSession();
+    await session.InitializeAsync();
+    for (var i = 0; i < 20 && !session.IsConnected; i++) await Task.Delay(1000);
+    Console.WriteLine($"connected={session.IsConnected} data={session.ConnectionStatus.DataConnected}");
+
+    await session.SetMobileDataAsync(false);
+    await Task.Delay(2000);
+    var afterOff = await probeAdb.ShellTextAsync(Serial(session), "ip -f inet addr show rmnet0");
+    Console.WriteLine($"after disconnect data={session.ConnectionStatus.DataConnected} rmnetIp={afterOff.Contains("inet ")}");
+
+    await session.SetMobileDataAsync(true);
+    await Task.Delay(2000);
+    var afterOn = await probeAdb.ShellTextAsync(Serial(session), "ip -f inet addr show rmnet0");
+    Console.WriteLine($"after connect data={session.ConnectionStatus.DataConnected} rmnetIp={afterOn.Contains("inet ")} state={session.ConnectionStatus.State} ip={session.ConnectionStatus.IpAddress} mifi={session.MifiStatus?.NetStatus}");
+    return 0;
+
+    static string Serial(ModemSession s) =>
+        s.ActiveDevice?.AdbSerial ?? throw new InvalidOperationException("No modem.");
+}
+
 var log = new QuietLog();
 var adb = new AdbClient(log);
 var devices = await adb.GetDevicesAsync();
