@@ -96,6 +96,20 @@ public sealed class WifiManagementViewModel : ObservableObject
 
     public string Feedback { get => _feedback; private set => SetProperty(ref _feedback, value); }
     public bool CanEdit => WifiCapabilities.BasicChangesVerified && !Busy && _snapshot is { ConfigurationAvailable: true } && _session.IsConnected;
+    public bool WifiPowerEnabled => !Busy && _session.IsConnected && _snapshot is not null;
+    public bool WifiPowerOn
+    {
+        get => WifiEnabled;
+        set
+        {
+            if (value == WifiEnabled || Busy || !_session.IsConnected)
+            {
+                return;
+            }
+
+            _ = SetWifiPowerAsync(value);
+        }
+    }
     public bool CanSave => CanEdit && new WifiBasicSettings(Ssid, MaximumClients).ValidationError is null &&
         (Ssid != _snapshot?.Ssid || MaximumClients != _snapshot?.MaximumClients);
     public bool WifiEnabled => _snapshot is { ApState: 13, HostapdRunning: true };
@@ -184,6 +198,33 @@ public sealed class WifiManagementViewModel : ObservableObject
         Feedback = message;
     }
 
+    private async Task SetWifiPowerAsync(bool on)
+    {
+        Busy = true;
+        Feedback = on ? "Turning Wi-Fi on…" : "Turning Wi-Fi off…";
+        try
+        {
+            var ok = await _session.SetWifiPowerAsync(on);
+            Feedback = ok
+                ? on ? "Wi-Fi is on and broadcasting." : "Wi-Fi is off. Clients are disconnected."
+                : on
+                    ? "The access point did not return. Reboot the modem, then try again."
+                    : "The access point did not stay off; it was restored.";
+        }
+        catch
+        {
+            Feedback = "Wi-Fi power change failed. Check the modem connection.";
+        }
+        finally
+        {
+            Busy = false;
+        }
+
+        await RefreshAsync();
+        Raise(nameof(WifiPowerOn), nameof(WifiPowerEnabled));
+        CommandManager.InvalidateRequerySuggested();
+    }
+
     private void Clear()
     {
         _snapshot = null;
@@ -201,6 +242,7 @@ public sealed class WifiManagementViewModel : ObservableObject
             nameof(Gateway), nameof(LanAddress), nameof(DefaultGateway), nameof(DhcpStatus), nameof(DhcpStart),
             nameof(DhcpEnd), nameof(DhcpLease), nameof(ConnectedCount), nameof(WifiEnabled), nameof(LastUpdated),
             nameof(ClientSummary), nameof(CanEdit), nameof(CanSave), nameof(PageTitle),
-            nameof(HasClientRows), nameof(HasRangeRows), nameof(WifiDisabled), nameof(BroadcastDisabled), nameof(IsAes));
+            nameof(HasClientRows), nameof(HasRangeRows), nameof(WifiDisabled), nameof(BroadcastDisabled), nameof(IsAes),
+            nameof(WifiPowerOn), nameof(WifiPowerEnabled));
     }
 }

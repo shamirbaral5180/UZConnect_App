@@ -62,8 +62,8 @@ no firmware flashing, no vendor cloud.
 
 | | |
 |---|---|
-| **Single-file (recommended)** | `UZConnect-0.2.0-win-x64.exe` — download and run, nothing to unzip |
-| Portable build | `UZConnect-0.2.0-win-x64.zip` (~62 MB) |
+| **Single-file (recommended)** | `UZConnect-0.3.0-win-x64.exe` — download and run, nothing to unzip |
+| Portable build | `UZConnect-0.3.0-win-x64.zip` (~62 MB) |
 | Requirements | Windows 10/11 x64 · UZ801 modem over USB · ADB authorized |
 | Runtime | None — .NET 10 is bundled |
 
@@ -82,7 +82,7 @@ no firmware flashing, no vendor cloud.
 
 | Area | What you get |
 |---|---|
-| **Connection** | Live operator, network type, signal, data session, IP, duration, speed graph, connect/disconnect |
+| **Connection** | Live operator, network type, signal, data session, IP, duration, connect/disconnect, and a real-time details panel with download/upload rates |
 | **APN** | Profile list, create/edit, NTC and Ncell defaults, manual connect |
 | **SMS** | Inbox/Sent/Drafts/Recycle, selection and select‑all, confirmed multi‑delete, classic Edit dialog, compose/reply/forward/export, delivery reports |
 | **USSD** | Saved command list, balance and menu replies, temporary 3G switching for USSD and automatic restore |
@@ -103,7 +103,9 @@ no firmware flashing, no vendor cloud.
 | USSD balance and interactive menus | ✅ Verified |
 | Wi‑Fi status, client list, DHCP ranges | ✅ Verified |
 | Wi‑Fi name and maximum devices | ✅ Verified with backup, verification and rollback |
-| Wi‑Fi ON/OFF, password, hidden SSID | ⛔ Disabled — blocked by stock firmware |
+| Wi‑Fi ON/OFF | ✅ Verified with access‑point state checks |
+| Internet sharing to Wi‑Fi/RNDIS clients | ✅ IPv4 forwarding + NAT repaired automatically |
+| Wi‑Fi password, hidden SSID | ⛔ Disabled — blocked by stock firmware |
 | Channel, security mode, DHCP/DNS editing | 👁 Read‑only |
 
 ---
@@ -123,11 +125,20 @@ name, connected devices with IP and MAC, and the active DHCP ranges.
    config, vendor status, `hostapd` and `rndis0`.
 5. On failure, restore the backup and verify it again.
 
-**Wi‑Fi ON/OFF, password changes and hidden SSID are intentionally disabled.** On stock
-V2.3.11 the vendor service re‑asserts its own in‑memory settings on every bind, and the
-networking service writes the WPA passphrase to the Android log during every access‑point
-start. No safe, durable control exists without modifying system components, so UZConnect
-shows the controls disabled with the reason instead of faking success.
+**Wi‑Fi ON/OFF works.** Turning it off cancels the vendor's 20‑second refresh alarm and disables
+the access point; turning it on re‑arms the alarm and restarts the AP. The app verifies the
+access‑point state, the running `hostapd` process and a valid channel before reporting success,
+and restores the AP if it does not stay off.
+
+**Password changes and hidden SSID remain disabled.** On stock V2.3.11 the vendor service
+re‑asserts those settings from memory on every bind, and the networking service writes the WPA
+passphrase to the Android log during every access‑point start. No safe, durable control exists
+without modifying system components.
+
+**Client internet.** The stock bridge leaves IPv4 forwarding off and NAT empty, so connected
+Wi‑Fi/RNDIS clients cannot reach the internet even when the modem shows Connected. UZConnect
+repairs forwarding and NAT after connecting and verifies the rules. If Windows still prefers
+another adapter for internet, the details panel shows the real state.
 
 > Full evidence and the required system changes: **[docs/WIFI-MANAGEMENT.md](docs/WIFI-MANAGEMENT.md)**
 
@@ -203,7 +214,7 @@ dotnet publish src\UZConnect.App\UZConnect.App.csproj -c Release -r win-x64 --se
 | [Hardware report](docs/HARDWARE-REPORT.md) | USB identity, ADB, SMS, USSD and stock control‑channel evidence |
 | [Wi‑Fi management](docs/WIFI-MANAGEMENT.md) | Verified mechanisms, qualification results, blockers and required changes |
 | [UI reference](docs/UI-REFERENCE.md) | Layout and asset notes from the D‑Link Connection Manager |
-| [Release notes](docs/RELEASE-NOTES-0.1.0.md) | What ships in 0.1.0 and what is deliberately disabled |
+| [Release notes](docs/RELEASE-NOTES-0.3.0.md) | What ships in 0.3.0 and what is deliberately disabled |
 
 ---
 

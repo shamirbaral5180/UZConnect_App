@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using UZConnect.Core.Abstractions;
 using UZConnect.Core.Models;
 using UZConnect.Windows.Adb;
@@ -51,6 +52,12 @@ public sealed class ModemSession : IDisposable
     private int _ussdRestoreMode;
     private bool _apnDefaultsEnsured;
     private DateTimeOffset _lastStockRecoveryAt = DateTimeOffset.MinValue;
+    private readonly SemaphoreSlim _rateGate = new(1, 1);
+    private DateTimeOffset _lastTetherCheck = DateTimeOffset.MinValue;
+    private string _dataInterface = "rmnet0";
+    private long _fastRx;
+    private long _fastTx;
+    private DateTimeOffset _fastAt;
 
     public string? CurrentOperator => MifiStatus?.Operator ?? NetworkInfo.Operator;
     private long _lastTxBytes;
@@ -362,6 +369,11 @@ public sealed class ModemSession : IDisposable
         var connection = await _mifi.GetConnectionInfoAsync(serial, cancellationToken).ConfigureAwait(false);
         var traffic = await _mifi.GetTrafficAsync(serial, cancellationToken).ConfigureAwait(false);
         var wifi = await _mifi.GetWifiStatusAsync(serial, cancellationToken).ConfigureAwait(false);
+        var data = await GetDataSessionAsync(serial, cancellationToken).ConfigureAwait(false);
+        if (data.ip is not null)
+        {
+            _dataInterface = data.iface;
+        }
 
         if (status is null &&
             DateTimeOffset.UtcNow - _lastStockRecoveryAt > TimeSpan.FromMinutes(2))
@@ -386,14 +398,18 @@ public sealed class ModemSession : IDisposable
             var hasDataIp = !string.IsNullOrWhiteSpace(connection?.Ip) &&
                             !string.Equals(connection!.Ip, "0.0.0.0", StringComparison.Ordinal) &&
                             !string.Equals(connection.Ip, "192.168.100.1", StringComparison.Ordinal);
-            var connectedNow = status.IsConnected || hasDataIp;
+            var connectedNow = status.IsConnected || hasDataIp || data.ip is not null;
             if (connectedNow)
             {
                 _connectedSince ??= now;
+                await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 _connectedSince = null;
+                _fastAt = default;
+                RxRateKbps = 0;
+                TxRateKbps = 0;
             }
 
             var duration = _connectedSince is null ? (long?)null : (long)(now - _connectedSince.Value).TotalSeconds;
@@ -415,7 +431,7 @@ public sealed class ModemSession : IDisposable
             {
                 DataConnected = connectedNow,
                 State = connectedNow ? "Connected" : status.NetStatus,
-                IpAddress = connectedNow ? (connection?.Ip ?? ConnectionStatus.IpAddress) : null,
+                IpAddress = connectedNow ? (connection?.Ip ?? data.ip ?? ConnectionStatus.IpAddress) : null,
                 DurationSeconds = duration,
                 RxBytes = rx ?? ConnectionStatus.RxBytes,
                 TxBytes = tx ?? ConnectionStatus.TxBytes
@@ -425,6 +441,34 @@ public sealed class ModemSession : IDisposable
             {
                 ConnectionStatus = ConnectionStatus with { MobileDataEnabled = true };
             }
+        }
+        else if (data.ip is not null)
+        {
+            // The vendor page can be unavailable while the modem still has a live data session.
+            var now = DateTimeOffset.Now;
+            _connectedSince ??= now;
+            ConnectionStatus = ConnectionStatus with
+            {
+                DataConnected = true,
+                MobileDataEnabled = true,
+                State = "Connected",
+                IpAddress = data.ip,
+                DurationSeconds = (long)(now - _connectedSince.Value).TotalSeconds
+            };
+            await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            _connectedSince = null;
+            _fastAt = default;
+            RxRateKbps = 0;
+            TxRateKbps = 0;
+            ConnectionStatus = ConnectionStatus with
+            {
+                DataConnected = false,
+                State = "Disconnected",
+                IpAddress = null
+            };
         }
 
         RaiseState("mifi");
@@ -449,6 +493,23 @@ public sealed class ModemSession : IDisposable
             ?? throw new InvalidOperationException("Connect the modem before changing Wi-Fi.");
         await _actionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try { return await _wifiManagement.ApplyBasicAsync(serial, settings, cancellationToken).ConfigureAwait(false); }
+        finally { _actionGate.Release(); }
+    }
+
+    public async Task<bool> SetWifiPowerAsync(bool on, CancellationToken cancellationToken = default)
+    {
+        var serial = ActiveDevice?.AdbSerial
+            ?? throw new InvalidOperationException("Connect the modem before changing Wi-Fi.");
+        await _actionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var ok = await _wifiManagement.SetPowerAsync(serial, on, cancellationToken).ConfigureAwait(false);
+            if (ok)
+            {
+                await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
+            }
+            return ok;
+        }
         finally { _actionGate.Release(); }
     }
 
@@ -800,6 +861,7 @@ public sealed class ModemSession : IDisposable
             await EnsureDefaultApnProfilesAsync(cancellationToken).ConfigureAwait(false);
             if (MifiStatus?.IsConnected == true || ConnectionStatus.DataConnected)
             {
+                await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
                 return;
             }
 
@@ -819,6 +881,7 @@ public sealed class ModemSession : IDisposable
                     await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
                     if (MifiStatus?.IsConnected == true || ConnectionStatus.DataConnected)
                     {
+                        await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
                         return;
                     }
                 }
@@ -847,6 +910,148 @@ public sealed class ModemSession : IDisposable
 
         await Task.Delay(2500, cancellationToken).ConfigureAwait(false);
         await RefreshMifiAsync(cancellationToken).ConfigureAwait(false);
+        if (enabled && (MifiStatus?.IsConnected == true || ConnectionStatus.DataConnected))
+        {
+            await EnsureClientInternetAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<(string iface, string? ip)> GetDataSessionAsync(
+        string serial, CancellationToken cancellationToken)
+    {
+        var route = await _adb.ShellTextAsync(serial, "ip route show default",
+            TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+        var routeMatch = Regex.Match(route, @"\bdev\s+(?<if>\w+)");
+        var iface = routeMatch.Success ? routeMatch.Groups["if"].Value : "rmnet0";
+
+        var address = await _adb.ShellTextAsync(serial, $"ip -f inet addr show {iface}",
+            TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+        var addressMatch = Regex.Match(address, @"inet\s+(?<ip>\d+\.\d+\.\d+\.\d+)");
+        return (iface, addressMatch.Success ? addressMatch.Groups["ip"].Value : null);
+    }
+
+    /// <summary>
+    /// Stock V2.3.11 keeps the USB/Wi-Fi bridge up but leaves IPv4 forwarding off and the NAT
+    /// chain empty, so connected clients cannot reach the internet. This repairs that path and
+    /// verifies it. The change is runtime only and is re-applied after a modem reboot.
+    /// </summary>
+    public async Task<bool> EnsureClientInternetAsync(CancellationToken cancellationToken = default)
+    {
+        var serial = ActiveDevice?.AdbSerial;
+        if (string.IsNullOrWhiteSpace(serial) || !IsConnected)
+        {
+            return false;
+        }
+
+        if (DateTimeOffset.UtcNow - _lastTetherCheck < TimeSpan.FromSeconds(15))
+        {
+            return true;
+        }
+
+        _lastTetherCheck = DateTimeOffset.UtcNow;
+        try
+        {
+            var route = await _adb.ShellTextAsync(serial, "ip route show default",
+                TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            var routeMatch = Regex.Match(route, @"\bdev\s+(?<if>\w+)");
+            if (routeMatch.Success)
+            {
+                _dataInterface = routeMatch.Groups["if"].Value;
+            }
+
+            var bridge = await _adb.ShellTextAsync(serial, "ip -f inet addr show br0",
+                TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            var subnetMatch = Regex.Match(bridge, @"inet\s+(?<net>\d+\.\d+\.\d+)\.\d+/\d+");
+            var subnet = subnetMatch.Success ? $"{subnetMatch.Groups["net"].Value}.0/24" : "192.168.100.0/24";
+
+            var forward = (await _adb.ShellTextAsync(serial, "cat /proc/sys/net/ipv4/ip_forward",
+                TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false)).Trim();
+            if (forward != "1")
+            {
+                await _adb.ShellAsync(serial, "echo 1 > /proc/sys/net/ipv4/ip_forward",
+                    TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            }
+
+            var nat = await _adb.ShellTextAsync(serial, "iptables -t nat -S natctrl_nat_POSTROUTING",
+                TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            if (!nat.Contains(subnet, StringComparison.Ordinal) ||
+                !nat.Contains(_dataInterface, StringComparison.Ordinal))
+            {
+                await _adb.ShellAsync(serial,
+                    $"iptables -t nat -A natctrl_nat_POSTROUTING -s {subnet} -o {_dataInterface} -j MASQUERADE",
+                    TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            }
+
+            var forwardNow = (await _adb.ShellTextAsync(serial, "cat /proc/sys/net/ipv4/ip_forward",
+                TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false)).Trim();
+            var natNow = await _adb.ShellTextAsync(serial, "iptables -t nat -S natctrl_nat_POSTROUTING",
+                TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            var verified = forwardNow == "1" &&
+                           natNow.Contains(subnet, StringComparison.Ordinal) &&
+                           natNow.Contains(_dataInterface, StringComparison.Ordinal);
+            _log.Info("Connection", verified
+                ? $"Client internet path verified ({subnet} via {_dataInterface})."
+                : "Client internet path could not be verified.");
+            return verified;
+        }
+        catch (Exception ex)
+        {
+            _log.Warning("Connection", $"Client internet setup failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>One-second data counters for the live speed display.</summary>
+    public async Task RefreshDataRatesAsync(CancellationToken cancellationToken = default)
+    {
+        var serial = ActiveDevice?.AdbSerial;
+        if (string.IsNullOrWhiteSpace(serial) || !IsConnected)
+        {
+            RxRateKbps = 0;
+            TxRateKbps = 0;
+            return;
+        }
+
+        if (!await _rateGate.WaitAsync(0, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        try
+        {
+            var text = await _adb.ShellTextAsync(serial,
+                $"cat /sys/class/net/{_dataInterface}/statistics/rx_bytes; " +
+                $"cat /sys/class/net/{_dataInterface}/statistics/tx_bytes",
+                TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false);
+            var parts = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2 ||
+                !long.TryParse(parts[0].Trim(), out var rx) ||
+                !long.TryParse(parts[1].Trim(), out var tx))
+            {
+                return;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            if (_fastAt != default)
+            {
+                var seconds = Math.Max(0.5, (now - _fastAt).TotalSeconds);
+                RxRateKbps = Math.Max(0, (rx - _fastRx) / 1024d / seconds);
+                TxRateKbps = Math.Max(0, (tx - _fastTx) / 1024d / seconds);
+            }
+
+            _fastRx = rx;
+            _fastTx = tx;
+            _fastAt = now;
+            RaiseState("rates");
+        }
+        catch
+        {
+            // Counters are optional; the next tick retries.
+        }
+        finally
+        {
+            _rateGate.Release();
+        }
     }
 
     public async Task<IReadOnlyList<ApnConfig>> GetApnsAsync(CancellationToken cancellationToken = default)

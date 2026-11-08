@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Windows.Input;
 using System.Windows.Threading;
 using UZConnect.Core.Models;
@@ -8,6 +10,7 @@ namespace UZConnect.App.ViewModels;
 
 public sealed class DashboardViewModel : ObservableObject, IPageViewModel
 {
+    private static readonly HttpClient ProbeClient = new() { Timeout = TimeSpan.FromSeconds(3) };
     private readonly ModemSession _session;
     private int _unreadCount;
     private int _cachedCount;
@@ -15,7 +18,12 @@ public sealed class DashboardViewModel : ObservableObject, IPageViewModel
     private bool _isSyncing;
     private string? _lastError;
     private readonly DispatcherTimer _statusTimer;
+    private readonly DispatcherTimer _liveTimer;
+    private readonly DispatcherTimer _internetTimer;
     private string _connectionActionStatus = string.Empty;
+    private bool _isPcOnline;
+    private bool _probeBusy;
+    private string _pcInternetDetail = "Checking the internet connection…";
 
     public DashboardViewModel(ModemSession session)
     {
@@ -40,7 +48,35 @@ public sealed class DashboardViewModel : ObservableObject, IPageViewModel
                 }
             }
         };
+        _liveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _liveTimer.Tick += async (_, _) =>
+        {
+            if (!IsDataConnected)
+            {
+                Raise(nameof(DownloadRateValue), nameof(DownloadRateUnit),
+                    nameof(UploadRateValue), nameof(UploadRateUnit));
+                return;
+            }
+
+            try
+            {
+                await _session.RefreshDataRatesAsync();
+            }
+            catch
+            {
+                // The next tick retries.
+            }
+
+            Raise(nameof(DownloadRateValue), nameof(DownloadRateUnit),
+                nameof(UploadRateValue), nameof(UploadRateUnit),
+                nameof(DownloadTotalText), nameof(UploadTotalText), nameof(TotalTrafficText),
+                nameof(SessionDurationText));
+        };
+        _internetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+        _internetTimer.Tick += async (_, _) => await ProbeInternetAsync();
         DetectCommand = ScanCommand;
+        _liveTimer.Start();
+        _internetTimer.Start();
     }
 
     public string Title => "Dashboard";
@@ -80,6 +116,39 @@ public sealed class DashboardViewModel : ObservableObject, IPageViewModel
     public string ConnectionLabel => IsConnected ? (IsDataConnected ? "Connected" : "Disconnected") : "No device";
     public string ConnectButtonText => IsDataConnected ? "Disconnect" : "Connect";
     public string ConnectionStatusText => !IsConnected ? "No device" : IsDataConnected ? "Connected" : "Disconnected";
+    public string InternetHeadline => !IsConnected
+        ? "Modem not connected"
+        : _isPcOnline ? "Internet online"
+        : IsDataConnected ? "Connected, no internet" : "Internet disconnected";
+    public string InternetDetail => !IsConnected
+        ? "Plug in the UZ801 over USB to begin."
+        : _isPcOnline
+            ? "This PC can reach the internet."
+            : IsDataConnected
+                ? "The modem is online, but this PC cannot reach the internet. Check Windows network priority or another adapter."
+                : "Click Connect to start a mobile data session.";
+    public bool IsPcOnline => _isPcOnline;
+    public string PcStatusText => _isPcOnline ? "Online" : IsDataConnected ? "No internet" : "Offline";
+    public string PcStatusDetail => _pcInternetDetail;
+    public string DownloadRateValue => FormatRate(_session.RxRateKbps).value;
+    public string DownloadRateUnit => FormatRate(_session.RxRateKbps).unit;
+    public string UploadRateValue => FormatRate(_session.TxRateKbps).value;
+    public string UploadRateUnit => FormatRate(_session.TxRateKbps).unit;
+    public string SignalText => SignalBars <= 0 ? "Not available" : $"{SignalBars}/5";
+    public string SignalDescription => SignalBars switch
+    {
+        >= 5 => "Excellent",
+        4 => "Good",
+        3 => "Fair",
+        2 => "Weak",
+        1 => "Very weak",
+        _ => "No signal"
+    };
+    public string NetworkDetail => $"{OperatorText} · {NetworkTypeText}";
+    private static (string value, string unit) FormatRate(double kbps)
+        => kbps >= 1024
+            ? ($"{kbps / 1024d:0.0}", "MB/s")
+            : ($"{Math.Max(0, kbps):0}", "KB/s");
     public string ConnectionActionStatus
     {
         get => _connectionActionStatus;
@@ -255,6 +324,10 @@ public sealed class DashboardViewModel : ObservableObject, IPageViewModel
             nameof(ConnectButtonText), nameof(ConnectionStatusText), nameof(OperatorText), nameof(NetworkTypeText),
             nameof(SignalBars), nameof(RxRateText), nameof(TxRateText), nameof(SessionDurationText), nameof(IpText),
             nameof(UploadTotalText), nameof(DownloadTotalText), nameof(TotalTrafficText), nameof(ConnectButtonText));
+        Raise(nameof(InternetHeadline), nameof(InternetDetail), nameof(IsPcOnline), nameof(PcStatusText),
+            nameof(PcStatusDetail), nameof(DownloadRateValue), nameof(DownloadRateUnit),
+            nameof(UploadRateValue), nameof(UploadRateUnit), nameof(SignalText),
+            nameof(SignalDescription), nameof(NetworkDetail));
         await Task.CompletedTask;
     }
 
@@ -282,6 +355,55 @@ public sealed class DashboardViewModel : ObservableObject, IPageViewModel
         {
             ConnectionActionStatus = $"Connection request failed: {ex.Message}";
         }
+    }
+
+    private async Task ProbeInternetAsync()
+    {
+        if (_probeBusy)
+        {
+            return;
+        }
+
+        _probeBusy = true;
+        var online = false;
+        try
+        {
+            using var ping = new Ping();
+            var reply = await ping.SendPingAsync("1.1.1.1", 1500);
+            online = reply.Status == IPStatus.Success;
+            if (!online)
+            {
+                reply = await ping.SendPingAsync("8.8.8.8", 1500);
+                online = reply.Status == IPStatus.Success;
+            }
+
+            if (!online)
+            {
+                try
+                {
+                    using var response = await ProbeClient.GetAsync("http://connectivitycheck.gstatic.com/generate_204");
+                    online = (int)response.StatusCode == 204;
+                }
+                catch
+                {
+                    // ICMP and HTTP both failed.
+                }
+            }
+        }
+        catch
+        {
+            online = false;
+        }
+
+        _isPcOnline = online;
+        _pcInternetDetail = online
+            ? "This PC can reach the internet."
+            : IsDataConnected
+                ? "Modem connected, but Windows has no internet path."
+                : "No internet connection.";
+        _probeBusy = false;
+        Raise(nameof(IsPcOnline), nameof(PcStatusText), nameof(PcStatusDetail),
+            nameof(InternetHeadline), nameof(InternetDetail));
     }
 
     public async Task RefreshCountsAsync(CancellationToken cancellationToken = default)

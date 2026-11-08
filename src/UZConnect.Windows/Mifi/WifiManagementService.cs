@@ -18,9 +18,79 @@ public sealed class WifiManagementService(AdbClient adb, MifiWebClient mifi)
         try
         {
             await EnsureHelperAsync(serial, cancellationToken).ConfigureAwait(false);
-            return WifiSnapshot.Parse(await RunAsync(serial, "read", cancellationToken).ConfigureAwait(false));
+            return await ReadInternalAsync(serial, cancellationToken).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
+    }
+
+    private async Task<WifiSnapshot> ReadInternalAsync(string serial, CancellationToken cancellationToken)
+        => WifiSnapshot.Parse(await RunAsync(serial, "read", cancellationToken).ConfigureAwait(false));
+
+    /// <summary>
+    /// Turns the access point off or on using the verified vendor sequence. Off cancels the
+    /// 20-second vendor refresh so it cannot rebind; on re-arms it and restarts the AP. Both
+    /// paths require the state and the hostapd process to agree before reporting success.
+    /// </summary>
+    public async Task<bool> SetPowerAsync(string serial, bool on, CancellationToken cancellationToken = default)
+    {
+        if (!await _gate.WaitAsync(TimeSpan.FromSeconds(60), cancellationToken).ConfigureAwait(false))
+            throw new TimeoutException("A previous Wi-Fi operation is still running.");
+        try
+        {
+            await EnsureHelperAsync(serial, cancellationToken).ConfigureAwait(false);
+            if (on)
+            {
+                await ControlAsync(serial, "alarm-on", cancellationToken).ConfigureAwait(false);
+                if (!await _mifi.RestartWifiAsync(serial, cancellationToken).ConfigureAwait(false))
+                    await ControlAsync(serial, "ap-cycle", cancellationToken).ConfigureAwait(false);
+
+                for (var attempt = 0; attempt < 3; attempt++)
+                {
+                    for (var check = 0; check < 4; check++)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(4), cancellationToken).ConfigureAwait(false);
+                        if (await IsOnAsync(serial, cancellationToken).ConfigureAwait(false))
+                            return true;
+                    }
+
+                    await _mifi.RestartWifiAsync(serial, cancellationToken).ConfigureAwait(false);
+                }
+
+                return false;
+            }
+
+            await ControlAsync(serial, "alarm-off", cancellationToken).ConfigureAwait(false);
+            await ControlAsync(serial, "ap-off", cancellationToken).ConfigureAwait(false);
+            for (var check = 0; check < 5; check++)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false);
+                var snapshot = await ReadInternalAsync(serial, cancellationToken).ConfigureAwait(false);
+                if (snapshot.ApState is 10 or 11 && !snapshot.HostapdRunning)
+                    return true;
+            }
+
+            // Restore the access point if it would not stay off.
+            await ControlAsync(serial, "alarm-on", cancellationToken).ConfigureAwait(false);
+            await _mifi.RestartWifiAsync(serial, cancellationToken).ConfigureAwait(false);
+            return false;
+        }
+        finally { _gate.Release(); }
+    }
+
+    private async Task<bool> IsOnAsync(string serial, CancellationToken cancellationToken)
+    {
+        var snapshot = await ReadInternalAsync(serial, cancellationToken).ConfigureAwait(false);
+        var status = await _mifi.GetWifiStatusAsync(serial, cancellationToken).ConfigureAwait(false);
+        return snapshot.ApState == 13 && snapshot.HostapdRunning && snapshot.Channel is > 0 &&
+               status is { Enabled: true };
+    }
+
+    private async Task ControlAsync(string serial, string action, CancellationToken cancellationToken)
+    {
+        var result = await adb.ShellAsync(serial,
+            $"CLASSPATH={RemoteJar} app_process /system/bin WifiControl {action}",
+            TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
+        if (!result.Success) throw new IOException("The Wi-Fi control helper did not respond.");
     }
 
     // A hardware-qualification caller can use the same transaction as the UI, without weakening its release gate.

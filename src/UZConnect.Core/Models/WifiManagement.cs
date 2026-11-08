@@ -85,7 +85,7 @@ public static class WifiCapabilities
     public static IReadOnlyList<WifiFeature> Features { get; } = new WifiFeature[]
     {
         new("Network name / maximum devices", "Available", "Changes are backed up, applied, confirmed in active and saved state, and restored if verification fails."),
-        new("Wi-Fi on / off", "Unavailable", "The modem service re-enables the access point, and the networking service restarts hostapd if it is stopped. A firmware change is required."),
+        new("Wi-Fi on / off", "Available", "Turns the access point off or on, then verifies the access-point state and the running service before reporting success."),
         new("Password changes", "Unavailable", "The stock networking service writes the passphrase to the Android log during every access-point restart."),
         new("Security mode", "Read only", "Only the current security configuration has been verified."),
         new("Channel selection", "Read only", "The modem's channel-changing control does not apply changes."),

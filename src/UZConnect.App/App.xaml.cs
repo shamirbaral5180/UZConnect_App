@@ -57,7 +57,7 @@ public partial class App : Application
                 StartupRegistration.SetEnabled(false);
             }
 
-            if (AppPreferences.ConnectOnStart)
+            if (AppPreferences.ConnectOnStart && AppPreferences.StartMinimized)
             {
                 _viewModel.EnableAutoConnectOnStart();
             }

@@ -315,15 +315,15 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Wi-Fi :" Style="{StaticResource RouterLabel}" />
-                                <ToggleButton Grid.Column="1" Style="{StaticResource PowerToggle}" IsEnabled="False"
-                                              IsChecked="{Binding WifiEnabled, Mode=OneWay}"
+                                <ToggleButton Grid.Column="1" Style="{StaticResource PowerToggle}" IsEnabled="{Binding WifiPowerEnabled}"
+                                              IsChecked="{Binding WifiPowerOn, Mode=TwoWay}"
                                               AutomationProperties.Name="Wi-Fi power" />
                                 <TextBlock Grid.Column="2" Text="{Binding Status}" Margin="14,0,0,0"
                                            VerticalAlignment="Center" FontWeight="Bold" />
                             </Grid>
                         </Border>
                         <Border Style="{StaticResource RouterRow}" BorderThickness="0">
-                            <TextBlock Text="Wi-Fi power is unavailable on this firmware; the modem service re-enables the access point."
+                            <TextBlock Text="Turning Wi-Fi off disconnects clients. The access point is restored automatically if it does not stay off."
                                        Foreground="{StaticResource RouterMuted}" TextWrapping="Wrap" />
                         </Border>
 

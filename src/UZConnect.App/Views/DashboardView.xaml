@@ -33,47 +33,66 @@
                        Visibility="{Binding IsDataConnected, Converter={StaticResource BoolToVis}}" />
         </StackPanel>
 
-        <!-- Connected statistics, lower right, as in the reference. -->
-        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,28,58"
-                    Visibility="{Binding IsDataConnected, Converter={StaticResource BoolToVis}}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120" />
-                    <ColumnDefinition Width="90" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="20" />
-                    <RowDefinition Height="20" />
-                    <RowDefinition Height="20" />
-                    <RowDefinition Height="20" />
-                    <RowDefinition Height="20" />
-                    <RowDefinition Height="20" />
-                </Grid.RowDefinitions>
-                <TextBlock Text="Connection time:" FontSize="10" />
-                <TextBlock Grid.Column="1" Text="{Binding SessionDurationText}" FontSize="10" />
-                <TextBlock Grid.Row="1" Text="Downloaded:" FontSize="10" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DownloadTotalText}" FontSize="10" />
-                <TextBlock Grid.Row="2" Text="Uploaded:" FontSize="10" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding UploadTotalText}" FontSize="10" />
-                <TextBlock Grid.Row="3" Text="Total:" FontSize="10" FontWeight="Bold" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TotalTrafficText}" FontSize="10" FontWeight="Bold" />
-                <TextBlock Grid.Row="4" Text="Downlink rate:" FontSize="10" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding RxRateText}" FontSize="10" FontWeight="Bold" />
-                <TextBlock Grid.Row="5" Text="Uplink rate:" FontSize="10" />
-                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding TxRateText}" FontSize="10" FontWeight="Bold" />
-            </Grid>
-        </StackPanel>
+        <!-- Connection details, lower right. -->
+        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,44"
+                Background="#F7FBFF" BorderBrush="#C5D3E2" BorderThickness="1" CornerRadius="6"
+                Padding="12,10" Width="288">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Image Source="pack://application:,,,/UZConnect;component/Assets/icons/status-device.png"
+                           Width="14" Height="14" VerticalAlignment="Center" />
+                    <TextBlock Text="Connection details" FontSize="10.5" FontWeight="Bold" Foreground="#1B2A55"
+                               Margin="6,0,0,0" VerticalAlignment="Center" />
+                    <TextBlock Text="live" FontSize="8" Foreground="#8A96A5" Margin="6,2,0,0" VerticalAlignment="Center" />
+                </StackPanel>
 
-        <!-- Disconnected activity, lower right, as in the reference. -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                    Margin="0,0,28,18"
-                    Visibility="{Binding IsDataConnected, Converter={StaticResource InverseBoolToVis}}">
-            <TextBlock Text="&#x25B2;" FontSize="16" Foreground="#D9534F" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding TxRateText}" FontSize="10" Margin="5,0,16,0" VerticalAlignment="Center" />
-            <TextBlock Text="&#x25BC;" FontSize="16" Foreground="#4C9A2A" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding RxRateText}" FontSize="10" Margin="5,0,0,0" VerticalAlignment="Center" />
-        </StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="104" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="28" />
+                        <RowDefinition Height="28" />
+                        <RowDefinition Height="20" />
+                        <RowDefinition Height="20" />
+                        <RowDefinition Height="20" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#x25BC;" FontSize="11" Foreground="#2E75B6" VerticalAlignment="Center" />
+                        <TextBlock Text="Download" FontSize="9" Foreground="#5A6B7C" Margin="4,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DownloadRateValue}" FontSize="15" FontWeight="Bold" Foreground="#1B2A55" />
+                        <TextBlock Text="{Binding DownloadRateUnit}" FontSize="8" Foreground="#5A6B7C"
+                                   Margin="4,0,0,3" VerticalAlignment="Bottom" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#x25B2;" FontSize="11" Foreground="#4C9A2A" VerticalAlignment="Center" />
+                        <TextBlock Text="Upload" FontSize="9" Foreground="#5A6B7C" Margin="4,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding UploadRateValue}" FontSize="15" FontWeight="Bold" Foreground="#1B2A55" />
+                        <TextBlock Text="{Binding UploadRateUnit}" FontSize="8" Foreground="#5A6B7C"
+                                   Margin="4,0,0,3" VerticalAlignment="Bottom" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="2" Text="Connection time" FontSize="9" Foreground="#6B7B8C" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SessionDurationText}" FontSize="10" VerticalAlignment="Center" Foreground="#1B2A55" />
+
+                    <TextBlock Grid.Row="3" Text="Total traffic" FontSize="9" Foreground="#6B7B8C" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TotalTrafficText}" FontSize="10" VerticalAlignment="Center" Foreground="#1B2A55" />
+
+                    <TextBlock Grid.Row="4" Text="This PC" FontSize="9" Foreground="#6B7B8C" VerticalAlignment="Center" />
+                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#x25CF;" FontSize="9" Foreground="#2E75B6" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding PcStatusText}" FontSize="10" FontWeight="Bold" Foreground="#1B2A55"
+                                   Margin="4,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>
-
-
