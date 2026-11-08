@@ -4,7 +4,7 @@
              xmlns:vm="clr-namespace:UZConnect.App.ViewModels"
              xmlns:views="clr-namespace:UZConnect.App.Views"
              xmlns:converters="clr-namespace:UZConnect.App.Converters"
-             ShutdownMode="OnMainWindowClose">
+             ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

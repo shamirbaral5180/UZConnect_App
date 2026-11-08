@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
 using UZConnect.App.Themes;
+using UZConnect.App.Services;
 using UZConnect.Windows;
 using UZConnect.Windows.Services;
 
@@ -46,6 +47,9 @@ public sealed class SettingsViewModel : ObservableObject, IPageViewModel
     private bool _connectionTypeNdis = true;
     private bool _connectionTypeRas;
     private bool _loadingSettings;
+    private bool _closeToTray = true;
+    private bool _startWithWindows;
+    private bool _connectOnStart;
     private readonly Dictionary<int, string> _accessNumbers = new();
 
     public SettingsViewModel(ModemSession session)
@@ -169,6 +173,66 @@ public sealed class SettingsViewModel : ObservableObject, IPageViewModel
             if (SetProperty(ref _autoReconnect, value))
             {
                 _ = _session.SetAutoConnectAsync(value);
+            }
+        }
+    }
+    public bool CloseToTray
+    {
+        get => _closeToTray;
+        set
+        {
+            if (!SetProperty(ref _closeToTray, value))
+            {
+                return;
+            }
+
+            AppPreferences.CloseToTray = value;
+            if (!_loadingSettings)
+            {
+                _ = _session.Settings.SetAsync(AppPreferences.SettingCloseToTray, value ? "true" : "false");
+            }
+        }
+    }
+    public bool StartWithWindows
+    {
+        get => _startWithWindows;
+        set
+        {
+            if (!SetProperty(ref _startWithWindows, value))
+            {
+                return;
+            }
+
+            if (StartupRegistration.SetEnabled(value))
+            {
+                AppPreferences.StartWithWindows = value;
+                if (!_loadingSettings)
+                {
+                    _ = _session.Settings.SetAsync(AppPreferences.SettingStartWithWindows, value ? "true" : "false");
+                }
+            }
+            else
+            {
+                _startWithWindows = !value;
+                OnPropertyChanged(nameof(StartWithWindows));
+                StatusText = "Windows did not accept the startup change. Try again from a normal user account.";
+            }
+        }
+    }
+    public bool ConnectOnStart
+    {
+        get => _connectOnStart;
+        set
+        {
+            if (!SetProperty(ref _connectOnStart, value))
+            {
+                return;
+            }
+
+            AppPreferences.ConnectOnStart = value;
+            if (!_loadingSettings)
+            {
+                _ = _session.Settings.SetAsync(AppPreferences.SettingConnectOnStart, value ? "true" : "false");
             }
         }
     }
@@ -481,10 +545,16 @@ public sealed class SettingsViewModel : ObservableObject, IPageViewModel
             _connectionTypeNdis = !string.Equals(connectionType, "RAS", StringComparison.OrdinalIgnoreCase);
             _connectionTypeRas = !_connectionTypeNdis;
             _networkMode = await _session.Settings.GetAsync("network.mode", cancellationToken) ?? "Auto";
+            _closeToTray = await GetBoolAsync(AppPreferences.SettingCloseToTray, true, cancellationToken);
+            _connectOnStart = await GetBoolAsync(AppPreferences.SettingConnectOnStart, false, cancellationToken);
+            _startWithWindows = StartupRegistration.IsEnabled();
+            AppPreferences.CloseToTray = _closeToTray;
+            AppPreferences.ConnectOnStart = _connectOnStart;
+            AppPreferences.StartWithWindows = _startWithWindows;
             Raise(nameof(PromptNewMessage), nameof(SmsDeliveryReport), nameof(SaveMessagesOnSim),
                 nameof(SaveMessagesLocal), nameof(SoundFileName), nameof(SaveModeNote),
                 nameof(ConnectionTypeNdis), nameof(ConnectionTypeRas), nameof(ConnectionTypeNote),
-                nameof(NetworkMode));
+                nameof(NetworkMode), nameof(CloseToTray), nameof(StartWithWindows), nameof(ConnectOnStart));
         }
         finally
         {

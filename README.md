@@ -62,8 +62,8 @@ no firmware flashing, no vendor cloud.
 
 | | |
 |---|---|
-| **Single-file (recommended)** | `UZConnect-0.1.0-win-x64.exe` — download and run, nothing to unzip |
-| Portable build | `UZConnect-0.1.0-win-x64.zip` (~62 MB) |
+| **Single-file (recommended)** | `UZConnect-0.2.0-win-x64.exe` — download and run, nothing to unzip |
+| Portable build | `UZConnect-0.2.0-win-x64.zip` (~62 MB) |
 | Requirements | Windows 10/11 x64 · UZ801 modem over USB · ADB authorized |
 | Runtime | None — .NET 10 is bundled |
 
@@ -71,6 +71,10 @@ no firmware flashing, no vendor cloud.
 2. Plug in the modem and wait for **Device ready**.
 3. If ADB is not detected, open **Settings → General** and point UZConnect at `adb.exe`.
 4. SMS sending needs the bundled helper; install it once from **Settings → General**.
+
+> **Runs in the tray.** Closing the window keeps the modem session alive in the notification area.
+> Enable **Start with Windows** and **Connect to the internet when UZConnect starts** in
+> **Settings → General** for a hands-free setup; use **Exit** on the tray menu to quit.
 
 ---
 
@@ -85,6 +89,8 @@ no firmware flashing, no vendor cloud.
 | **Contacts** | Read‑only SIM phonebook (by design) |
 | **Statistics** | Live upload/download rates, totals, session time |
 | **Wi‑Fi** | Router‑style page: status, network name, device limit, security/channel/broadcast, connected clients, DHCP ranges |
+| **Notification area** | Closing the window keeps UZConnect and the modem session alive in the tray; open, connect, disconnect or exit from its menu |
+| **Startup** | Optional “Start with Windows” and “Connect to the internet when UZConnect starts” |
 | **Diagnostics** | Redacted report export; no passwords, SMS bodies or full IMEIs |
 
 ### Status at a glance

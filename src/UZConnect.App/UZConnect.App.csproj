@@ -3,16 +3,22 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
     <RootNamespace>UZConnect.App</RootNamespace>
     <AssemblyName>UZConnect</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
     <PublishSingleFile>false</PublishSingleFile>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>UZConnect</Authors>
     <Product>UZConnect</Product>
     <ApplicationIcon>Assets\uzconnect.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\UZConnect.Core\UZConnect.Core.csproj" />
     <ProjectReference Include="..\UZConnect.Windows\UZConnect.Windows.csproj" />

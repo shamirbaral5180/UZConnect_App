@@ -17,6 +17,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool _isBusy;
     private string _busyText = string.Empty;
     private string? _lastError;
+    private bool _autoDataEnabled;
+    private bool _autoDataAttempted;
+    private int _autoDataAttempts;
+    private DateTimeOffset _autoDataNextAttempt = DateTimeOffset.MinValue;
 
     public MainViewModel()
     {
@@ -130,6 +134,78 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string PageSubtitle => _currentPage.Subtitle;
 
     public bool IsConnected => _session.IsConnected;
+    public ModemSession Session => _session;
+    public bool IsDataConnected => _session.ConnectionStatus.DataConnected || _session.MifiStatus?.IsConnected == true;
+    public event Action? ConnectionStateChanged;
+
+    /// <summary>Connects mobile data and reports whether a session is actually up.</summary>
+    public async Task<bool> ConnectInternetAsync()
+    {
+        if (!_session.IsConnected)
+        {
+            return false;
+        }
+
+        await _session.SetMobileDataAsync(true);
+        UpdateHeader();
+        ConnectionStateChanged?.Invoke();
+        return IsDataConnected;
+    }
+
+    public async Task DisconnectInternetAsync()
+    {
+        if (!_session.IsConnected)
+        {
+            return;
+        }
+
+        await _session.SetMobileDataAsync(false);
+        UpdateHeader();
+        ConnectionStateChanged?.Invoke();
+    }
+
+    /// <summary>Arms the one-shot auto-connect used at startup or when the modem appears.</summary>
+    public void EnableAutoConnectOnStart()
+    {
+        _autoDataEnabled = true;
+        _ = TryAutoConnectInternetAsync();
+    }
+
+    private async Task TryAutoConnectInternetAsync()
+    {
+        if (!_autoDataEnabled || _autoDataAttempted || !_session.IsConnected)
+        {
+            return;
+        }
+
+        if (IsDataConnected)
+        {
+            _autoDataAttempted = true;
+            return;
+        }
+
+        if (_autoDataAttempts >= 3 || DateTimeOffset.UtcNow < _autoDataNextAttempt)
+        {
+            return;
+        }
+
+        _autoDataAttempts++;
+        _autoDataNextAttempt = DateTimeOffset.UtcNow.AddSeconds(45);
+        try
+        {
+            await _session.SetMobileDataAsync(true);
+            UpdateHeader();
+            ConnectionStateChanged?.Invoke();
+            if (IsDataConnected)
+            {
+                _autoDataAttempted = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _session.Log.Warning("Connection", $"Automatic internet connection failed: {ex.Message}");
+        }
+    }
     public bool HasUsbDevice => _session.Devices.Count > 0;
     public string StatusDeviceText => _session.IsConnected ? "Device ready" : "No device";
     public string StatusConnectionText => _session.ConnectionStatus.DataConnected
@@ -258,6 +334,22 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             UpdateHeader();
             LastError = _session.LastError;
+            ConnectionStateChanged?.Invoke();
+            if (_autoDataEnabled)
+            {
+                if (e.Reason == "connected")
+                {
+                    _autoDataAttempts = 0;
+                    _autoDataAttempted = false;
+                    _autoDataNextAttempt = DateTimeOffset.MinValue;
+                }
+
+                if (_session.IsConnected)
+                {
+                    _ = TryAutoConnectInternetAsync();
+                }
+            }
+
             if (e.Reason is "connected" or "disconnected" or "scan" or "refresh" or "scan-error" or "connect-error")
             {
                 _ = SafeRefreshCurrentPageAsync();

@@ -42,6 +42,16 @@
                                   IsChecked="{Binding ConnectSoundDisconnect, Mode=TwoWay}" />
                         <CheckBox Style="{StaticResource ClassicCheckBox}" Content="Auto reconnect"
                                   IsChecked="{Binding AutoReconnect, Mode=TwoWay}" />
+                        <TextBlock Text="Application" FontWeight="Bold" FontSize="11" Margin="0,14,0,4" />
+                        <CheckBox Style="{StaticResource ClassicCheckBox}" Content="Close to the notification area"
+                                  IsChecked="{Binding CloseToTray, Mode=TwoWay}" />
+                        <CheckBox Style="{StaticResource ClassicCheckBox}" Content="Start UZConnect with Windows"
+                                  IsChecked="{Binding StartWithWindows, Mode=TwoWay}" Margin="14,5,0,0" />
+                        <CheckBox Style="{StaticResource ClassicCheckBox}" Content="Connect to the internet when UZConnect starts"
+                                  IsChecked="{Binding ConnectOnStart, Mode=TwoWay}" Margin="14,5,0,0" />
+                        <TextBlock Text="Closing the window keeps the modem connected in the notification area. Use Exit on the tray icon to quit."
+                                   FontSize="10" Foreground="{StaticResource MutedText}" Margin="0,10,0,0"
+                                   TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left" />
                         <TextBlock Text="These preferences are stored on this PC." FontSize="10"
                                    Foreground="{StaticResource MutedText}" Margin="0,10,0,0" />
                     </StackPanel>
