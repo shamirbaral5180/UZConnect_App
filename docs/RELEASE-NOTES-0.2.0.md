@@ -17,8 +17,8 @@ in the classic D-Link Connection Manager style.
 
 | File | What it is | SHA-256 |
 |---|---|---|
-| `UZConnect-0.2.0-win-x64.exe` | Single-file app, no unzip and no .NET install | see release assets |
-| `UZConnect-0.2.0-win-x64.zip` | Portable folder build | see release assets |
+| `UZConnect-0.2.0-win-x64.exe` | Single-file app, no unzip and no .NET install | `E6DF16B6F6C0040EAD2F8FF639C0EBB41EFF4AEDB9A12D7782DA070A7B24F5AA` |
+| `UZConnect-0.2.0-win-x64.zip` | Portable folder build | `616E626DC2248C7A5ADC19DB97819D7361194A15AEE8C622385EA6447470A472` |
 
 The single-file build extracts its bundled SMS/Wi-Fi helpers to
 `%LOCALAPPDATA%\UZConnect\helpers` on first use.
